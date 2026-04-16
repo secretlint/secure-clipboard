@@ -1,0 +1,10 @@
+.DS_Store
+/.build
+/Packages
+xcuserdata/
+DerivedData/
+.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
+.netrc
+
+# secretlint binary (downloaded via scripts/download-secretlint.sh)
+SecureClipboard/Resources/secretlint

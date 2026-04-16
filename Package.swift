@@ -1,0 +1,21 @@
+// swift-tools-version: 5.9
+import PackageDescription
+
+let package = Package(
+    name: "SecureClipboard",
+    platforms: [.macOS(.v14)],
+    targets: [
+        .executableTarget(
+            name: "SecureClipboard",
+            path: "SecureClipboard",
+            resources: [
+                .copy("Resources")
+            ]
+        ),
+        .testTarget(
+            name: "SecureClipboardTests",
+            dependencies: ["SecureClipboard"],
+            path: "SecureClipboardTests"
+        )
+    ]
+)
