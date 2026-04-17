@@ -18,8 +18,8 @@ mkdir -p "${MACOS}" "${RESOURCES}"
 # Copy binary
 cp ".build/release/${APP_NAME}" "${MACOS}/${APP_NAME}"
 
-# Copy SPM resource bundle into Resources/
-cp -R ".build/release/${APP_NAME}_${APP_NAME}.bundle" "${RESOURCES}/"
+# Copy SPM resource bundle next to binary (where Bundle.module looks for it)
+cp -R ".build/release/${APP_NAME}_${APP_NAME}.bundle" "${MACOS}/"
 
 # Create Info.plist
 cat > "${CONTENTS}/Info.plist" << PLIST
