@@ -4,17 +4,9 @@ macOS menu bar app that automatically scans clipboard content with [secretlint](
 
 ## Demo
 
-Copy the following text — SecureClipboard will automatically mask it:
+Copy text containing a secret — SecureClipboard will automatically mask it.
 
-```
-ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef12
-```
-
-After copying, your clipboard contains:
-
-```
-**************************************
-```
+For example, copying a Slack Bot Token like `xoxb-000000000000-000000000000-XXXXXXXXXXXXXXXXXXXXXXXX` results in your clipboard containing `*******************************************************`.
 
 ## Features
 

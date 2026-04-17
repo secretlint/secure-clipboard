@@ -18,8 +18,8 @@ mkdir -p "${MACOS}" "${RESOURCES}"
 # Copy binary
 cp ".build/release/${APP_NAME}" "${MACOS}/${APP_NAME}"
 
-# Copy resources from the bundle
-cp -R ".build/release/${APP_NAME}_${APP_NAME}.bundle/Resources/" "${RESOURCES}/"
+# Copy SPM resource bundle into Resources/
+cp -R ".build/release/${APP_NAME}_${APP_NAME}.bundle" "${RESOURCES}/"
 
 # Create Info.plist
 cat > "${CONTENTS}/Info.plist" << PLIST
@@ -38,7 +38,7 @@ cat > "${CONTENTS}/Info.plist" << PLIST
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
+    <string>1.0.0</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>

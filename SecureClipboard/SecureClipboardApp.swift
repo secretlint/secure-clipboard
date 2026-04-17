@@ -1,60 +1,60 @@
 import SwiftUI
 
-@main
-struct SecureClipboardApp: App {
-    @State private var state = StatusState()
-    @State private var monitor: ClipboardMonitor?
+final class AppState {
+    static let shared = AppState()
+    let statusState = StatusState()
+    var monitor: ClipboardMonitor?
 
-    var body: some Scene {
-        MenuBarExtra {
-            MenuBarView(state: state) {
-                NSApplication.shared.terminate(nil)
-            }
-        } label: {
-            Image(systemName: state.iconName)
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(state.isAlerted ? .red : .primary)
-        }
-        .menuBarExtraStyle(.menu)
-    }
-
-    init() {
-        let statusState = StatusState()
-        _state = State(initialValue: statusState)
+    private init() {
         let m = ClipboardMonitor(state: statusState)
         statusState.onCopy = { changeCount in
             m.recordOwnChange(changeCount: changeCount)
         }
-        _monitor = State(initialValue: m)
+        monitor = m
         m.start()
 
         // Check for secretlint updates on launch
+        let state = statusState
         let updater = SecretlintUpdater()
         Task {
             let currentVersion = await updater.currentVersion()
-            await MainActor.run {
-                statusState.secretlintVersion = currentVersion
-            }
-            guard statusState.autoUpdate else {
-                await MainActor.run {
-                    statusState.updateStatus = String(localized: "update.disabled", bundle: .module)
-                }
+            await MainActor.run { state.secretlintVersion = currentVersion }
+            guard state.autoUpdate else {
+                await MainActor.run { state.updateStatus = String(localized: "update.disabled", bundle: .module) }
                 return
             }
             let result = await updater.updateIfNeeded()
             await MainActor.run {
                 switch result {
                 case .upToDate(let version):
-                    statusState.updateStatus = String(localized: "update.up_to_date \(version)", bundle: .module)
+                    state.updateStatus = String(localized: "update.up_to_date \(version)", bundle: .module)
                 case .updated(let from, let to):
-                    statusState.updateStatus = String(localized: "update.updated \(from) \(to)", bundle: .module)
-                    statusState.secretlintVersion = to
+                    state.updateStatus = String(localized: "update.updated \(from) \(to)", bundle: .module)
+                    state.secretlintVersion = to
                 case .skipped(let reason):
-                    statusState.updateStatus = reason
+                    state.updateStatus = reason
                 case .failed(let error):
-                    statusState.updateStatus = String(localized: "update.failed \(error)", bundle: .module)
+                    state.updateStatus = String(localized: "update.failed \(error)", bundle: .module)
                 }
             }
         }
+    }
+}
+
+@main
+struct SecureClipboardApp: App {
+    private let appState = AppState.shared
+
+    var body: some Scene {
+        MenuBarExtra {
+            MenuBarView(state: appState.statusState) {
+                NSApplication.shared.terminate(nil)
+            }
+        } label: {
+            Image(systemName: appState.statusState.iconName)
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(appState.statusState.isAlerted ? .red : .primary)
+        }
+        .menuBarExtraStyle(.menu)
     }
 }

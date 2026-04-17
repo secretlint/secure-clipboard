@@ -10,7 +10,7 @@ let package = Package(
             name: "SecureClipboard",
             path: "SecureClipboard",
             resources: [
-                .process("Resources")
+                .copy("Resources")
             ]
         ),
         .testTarget(

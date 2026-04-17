@@ -10,7 +10,7 @@ final class ClipboardMonitor {
 
     private var lastChangeCount: Int
     private var ownChangeCount: Int?
-    private var timer: Timer?
+    private var isRunning = false
 
     init(
         scanner: SecretScanner? = nil,
@@ -38,33 +38,41 @@ final class ClipboardMonitor {
     }
 
     func start() {
-        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            Task { await self.check() }
+        isRunning = true
+        Thread.detachNewThread { [self] in
+            while self.isRunning {
+                guard self.state.isEnabled else {
+                    Thread.sleep(forTimeInterval: 0.5)
+                    continue
+                }
+                let pasteboard = NSPasteboard.general
+                let current = pasteboard.changeCount
+                if current != self.lastChangeCount, self.ownChangeCount != current {
+                    self.lastChangeCount = current
+                    if let text = pasteboard.string(forType: .string), !text.isEmpty {
+                        let semaphore = DispatchSemaphore(value: 0)
+                        Task {
+                            await self.scanText(text)
+                            semaphore.signal()
+                        }
+                        semaphore.wait()
+                    } else if let imageData = pasteboard.data(forType: .tiff) ?? pasteboard.data(forType: .png),
+                              let image = NSImage(data: imageData) {
+                        let semaphore = DispatchSemaphore(value: 0)
+                        Task {
+                            await self.scanImage(image)
+                            semaphore.signal()
+                        }
+                        semaphore.wait()
+                    }
+                }
+                Thread.sleep(forTimeInterval: 0.5)
+            }
         }
     }
 
     func stop() {
-        timer?.invalidate()
-        timer = nil
-    }
-
-    private func check() async {
-        guard state.isEnabled else { return }
-        guard hasClipboardChanged(since: lastChangeCount) else { return }
-
-        let pasteboard = NSPasteboard.general
-        lastChangeCount = pasteboard.changeCount
-
-        if let text = pasteboard.string(forType: .string), !text.isEmpty {
-            await scanText(text)
-            return
-        }
-
-        if let imageData = pasteboard.data(forType: .tiff) ?? pasteboard.data(forType: .png),
-           let image = NSImage(data: imageData) {
-            await scanImage(image)
-        }
+        isRunning = false
     }
 
     private func scanText(_ text: String) async {
