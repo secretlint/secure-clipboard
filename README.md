@@ -4,7 +4,19 @@ macOS menu bar app that automatically scans clipboard content with [secretlint](
 
 ## Demo
 
-Copy text containing a secret (API key, token, etc.) — SecureClipboard will automatically replace it with `***` in your clipboard.
+Copy text containing a secret — SecureClipboard will automatically replace it with `***` in your clipboard.
+
+Try it: copy the following Slack token and paste it somewhere.
+
+```
+xoxb-1234567890123-1234567890123-AbCdEfGhIjKlMnOpQrStUvWx
+```
+
+After copying, your clipboard will contain:
+
+```
+*********************************************************
+```
 
 Supported secret types: AWS, GitHub, Slack, GCP, Azure, npm, Docker, and [many more](https://github.com/secretlint/secretlint#rules).
 
