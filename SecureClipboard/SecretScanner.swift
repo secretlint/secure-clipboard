@@ -11,7 +11,7 @@ actor SecretScanner {
     private let configJSON: String
 
     private static let defaultConfigJSON = """
-    {"rules":[{"id":"@secretlint/secretlint-rule-preset-recommend"}]}
+    {"rules":[{"id":"@secretlint/secretlint-rule-preset-recommend"},{"id":"@secretlint/secretlint-rule-pattern"}]}
     """
 
     /// User config search paths (first match wins):

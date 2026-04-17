@@ -2,6 +2,20 @@
 
 macOS menu bar app that automatically scans clipboard content with [secretlint](https://github.com/secretlint/secretlint) and masks detected secrets. Secure by default.
 
+## Demo
+
+Copy the following text — SecureClipboard will automatically mask it:
+
+```
+ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef12
+```
+
+After copying, your clipboard contains:
+
+```
+**************************************
+```
+
 ## Features
 
 - Monitors clipboard changes (500ms polling)
@@ -38,6 +52,14 @@ swift test --disable-sandbox
 ```
 
 `--disable-sandbox` is required for NSPasteboard access.
+
+## Configuration
+
+SecureClipboard uses secretlint for scanning. You can customize rules via the menu: "Open .secretlintrc.json".
+
+Config file location: `~/.config/secure-clipboard/.secretlintrc.json`
+
+Default config includes `@secretlint/secretlint-rule-preset-recommend` and `@secretlint/secretlint-rule-pattern`. See [secretlint rules](https://github.com/secretlint/secretlint#rules) for available rules.
 
 ## Architecture
 
