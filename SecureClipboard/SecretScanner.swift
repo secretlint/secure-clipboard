@@ -8,18 +8,13 @@ struct ScanResult {
 
 actor SecretScanner {
     private let binaryPath: String
-    private let configJSON: String
+    private let fixedConfigJSON: String?
 
     private static let defaultConfigJSON = """
     {"rules":[{"id":"@secretlint/secretlint-rule-preset-recommend"},{"id":"@secretlint/secretlint-rule-pattern"}]}
     """
 
-    /// User config search paths (first match wins):
-    /// 1. ~/.config/secure-clipboard/.secretlintrc.json
-    /// 2. Bundled Resources/secretlintrc.json (via --secretlintrcJSON)
-    private static let userConfigPaths = [
-        NSHomeDirectory() + "/.config/secure-clipboard/.secretlintrc.json"
-    ]
+    private static let userConfigPath = NSHomeDirectory() + "/.config/secure-clipboard/.secretlintrc.json"
 
     init() {
         if let url = Bundle.module.url(forResource: "secretlint", withExtension: nil, subdirectory: "Resources") {
@@ -29,22 +24,22 @@ actor SecretScanner {
         } else {
             self.binaryPath = "secretlint"
         }
-        self.configJSON = Self.loadConfigJSON()
+        self.fixedConfigJSON = nil
     }
 
     init(binaryPath: String, configJSON: String? = nil) {
         self.binaryPath = binaryPath
-        self.configJSON = configJSON ?? Self.loadConfigJSON()
+        self.fixedConfigJSON = configJSON
     }
 
-    private static func loadConfigJSON() -> String {
-        for path in userConfigPaths {
-            if let data = FileManager.default.contents(atPath: path),
-               let json = String(data: data, encoding: .utf8) {
-                return json
-            }
+    /// Load config on every call so file changes are picked up without restart
+    private var configJSON: String {
+        if let fixed = fixedConfigJSON { return fixed }
+        if let data = FileManager.default.contents(atPath: Self.userConfigPath),
+           let json = String(data: data, encoding: .utf8) {
+            return json
         }
-        return defaultConfigJSON
+        return Self.defaultConfigJSON
     }
 
     func scan(text: String) async throws -> ScanResult {
