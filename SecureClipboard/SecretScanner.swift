@@ -10,6 +10,17 @@ actor SecretScanner {
     private let binaryPath: String
     private let configJSON: String
 
+    private static let defaultConfigJSON = """
+    {"rules":[{"id":"@secretlint/secretlint-rule-preset-recommend"}]}
+    """
+
+    /// User config search paths (first match wins):
+    /// 1. ~/.config/secure-clipboard/.secretlintrc.json
+    /// 2. Bundled Resources/secretlintrc.json (via --secretlintrcJSON)
+    private static let userConfigPaths = [
+        NSHomeDirectory() + "/.config/secure-clipboard/.secretlintrc.json"
+    ]
+
     init() {
         if let url = Bundle.module.url(forResource: "secretlint", withExtension: nil, subdirectory: "Resources") {
             self.binaryPath = url.path
@@ -18,16 +29,22 @@ actor SecretScanner {
         } else {
             self.binaryPath = "secretlint"
         }
-        self.configJSON = """
-        {"rules":[{"id":"@secretlint/secretlint-rule-preset-recommend"}]}
-        """
+        self.configJSON = Self.loadConfigJSON()
     }
 
     init(binaryPath: String, configJSON: String? = nil) {
         self.binaryPath = binaryPath
-        self.configJSON = configJSON ?? """
-        {"rules":[{"id":"@secretlint/secretlint-rule-preset-recommend"}]}
-        """
+        self.configJSON = configJSON ?? Self.loadConfigJSON()
+    }
+
+    private static func loadConfigJSON() -> String {
+        for path in userConfigPaths {
+            if let data = FileManager.default.contents(atPath: path),
+               let json = String(data: data, encoding: .utf8) {
+                return json
+            }
+        }
+        return defaultConfigJSON
     }
 
     func scan(text: String) async throws -> ScanResult {
