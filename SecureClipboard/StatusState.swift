@@ -46,11 +46,15 @@ final class StatusState {
 
         clearTimer?.invalidate()
         clearTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: false) { [weak self] _ in
-            self?.lastOriginalText = nil
-            self?.lastOriginalImage = nil
+            DispatchQueue.main.async {
+                self?.lastOriginalText = nil
+                self?.lastOriginalImage = nil
+            }
         }
         Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { [weak self] _ in
-            self?.isAlerted = false
+            DispatchQueue.main.async {
+                self?.isAlerted = false
+            }
         }
     }
 
