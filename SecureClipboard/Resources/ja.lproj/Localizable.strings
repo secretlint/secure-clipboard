@@ -4,6 +4,7 @@
 "menu.copy_original" = "元のテキストをコピー";
 "menu.no_detections" = "検出履歴なし";
 "menu.recent" = "直近の検出:";
+"menu.open_secretlintrc" = ".secretlintrc.json を開く";
 "menu.quit" = "終了";
 
 /* Notifications */

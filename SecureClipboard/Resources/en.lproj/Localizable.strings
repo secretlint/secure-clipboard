@@ -4,6 +4,7 @@
 "menu.copy_original" = "Copy Original Text";
 "menu.no_detections" = "No detections";
 "menu.recent" = "Recent:";
+"menu.open_secretlintrc" = "Open .secretlintrc.json";
 "menu.quit" = "Quit";
 
 /* Notifications */

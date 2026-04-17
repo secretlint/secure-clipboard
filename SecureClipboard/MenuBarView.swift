@@ -5,10 +5,23 @@ struct MenuBarView: View {
     let onQuit: () -> Void
 
     private let repoURL = URL(string: "https://github.com/secretlint/secure-clipboard")!
+    private let configPath = NSHomeDirectory() + "/.config/secure-clipboard/.secretlintrc.json"
+    private let defaultConfig = """
+    {
+        "rules": [
+            {
+                "id": "@secretlint/secretlint-rule-preset-recommend"
+            }
+        ]
+    }
+    """
 
     var body: some View {
         Toggle(String(localized: "menu.enabled", bundle: .module), isOn: $state.isEnabled)
         Toggle(String(localized: "menu.auto_update", bundle: .module), isOn: $state.autoUpdate)
+        Button(String(localized: "menu.open_secretlintrc", bundle: .module)) {
+            openConfig()
+        }
         Divider()
 
         if state.lastOriginalText != nil {
@@ -51,5 +64,16 @@ struct MenuBarView: View {
             onQuit()
         }
         .keyboardShortcut("q")
+    }
+
+    private func openConfig() {
+        let url = URL(fileURLWithPath: configPath)
+        let dir = url.deletingLastPathComponent()
+        // Create directory and default config if not exists
+        if !FileManager.default.fileExists(atPath: configPath) {
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            try? defaultConfig.write(to: url, atomically: true, encoding: .utf8)
+        }
+        NSWorkspace.shared.open(url)
     }
 }
