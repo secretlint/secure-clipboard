@@ -6,9 +6,9 @@ macOS menu bar app that automatically scans clipboard content with [secretlint](
 
 ```bash
 curl -fSL https://github.com/secretlint/secure-clipboard/releases/latest/download/SecureClipboard.app.zip -o /tmp/SecureClipboard.app.zip
-unzip -o /tmp/SecureClipboard.app.zip -d ~/Applications
-xattr -cr ~/Applications/SecureClipboard.app
-open ~/Applications/SecureClipboard.app
+unzip -o /tmp/SecureClipboard.app.zip -d /Applications
+xattr -cr /Applications/SecureClipboard.app
+open /Applications/SecureClipboard.app
 ```
 
 ## Features
