@@ -56,7 +56,7 @@ struct MenuBarView: View {
                 .foregroundStyle(.secondary)
         }
         Divider()
-        Button("SecureClipboard") {
+        Button("SecureClipboard v\(AppVersion.current)") {
             NSWorkspace.shared.open(repoURL)
         }
         .font(.caption)
