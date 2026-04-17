@@ -37,6 +37,8 @@ After copying, your clipboard will contain:
 *********************************************************
 ```
 
+If you need the raw (unmasked) text, click the menu bar icon and select "Copy Original Text". This is available for 30 seconds after detection.
+
 Supported secret types: AWS, GitHub, Slack, GCP, Azure, npm, Docker, and [many more](https://github.com/secretlint/secretlint#rules).
 
 ## Configuration
