@@ -13,6 +13,9 @@ final class StatusState {
     var isEnabled: Bool = true
     var isAlerted: Bool = false
     var recentDetections: [DetectionRecord] = []
+    var autoUpdate: Bool = true
+    var secretlintVersion: String?
+    var updateStatus: String?
 
     private(set) var lastOriginalText: String?
     private(set) var lastOriginalImage: NSImage?
@@ -58,7 +61,7 @@ final class StatusState {
         }
     }
 
-    /// 元のテキストをクリップボードにコピーする（スキャンをスキップ）
+    /// Copy original text to clipboard (skips monitor scan)
     func copyOriginalText() {
         guard let text = lastOriginalText else { return }
         let pasteboard = NSPasteboard.general
@@ -67,6 +70,6 @@ final class StatusState {
         onCopy?(pasteboard.changeCount)
     }
 
-    /// ClipboardMonitorが自身の変更を記録するためのコールバック
+    /// Callback for ClipboardMonitor to record own clipboard changes
     var onCopy: ((Int) -> Void)?
 }

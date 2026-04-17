@@ -27,5 +27,34 @@ struct SecureClipboardApp: App {
         }
         _monitor = State(initialValue: m)
         m.start()
+
+        // Check for secretlint updates on launch
+        let updater = SecretlintUpdater()
+        Task {
+            let currentVersion = await updater.currentVersion()
+            await MainActor.run {
+                statusState.secretlintVersion = currentVersion
+            }
+            guard statusState.autoUpdate else {
+                await MainActor.run {
+                    statusState.updateStatus = "Auto update disabled"
+                }
+                return
+            }
+            let result = await updater.updateIfNeeded()
+            await MainActor.run {
+                switch result {
+                case .upToDate(let version):
+                    statusState.updateStatus = "Up to date (v\(version))"
+                case .updated(let from, let to):
+                    statusState.updateStatus = "Updated (v\(from) → v\(to))"
+                    statusState.secretlintVersion = to
+                case .skipped(let reason):
+                    statusState.updateStatus = reason
+                case .failed(let error):
+                    statusState.updateStatus = "Update check failed: \(error)"
+                }
+            }
+        }
     }
 }

@@ -4,22 +4,32 @@ struct MenuBarView: View {
     @Bindable var state: StatusState
     let onQuit: () -> Void
 
+    private let repoURL = URL(string: "https://github.com/secretlint/secure-clipboard")!
+
     var body: some View {
-        Toggle("有効", isOn: $state.isEnabled)
+        Text("SecureClipboard")
+            .font(.headline)
+        Button("GitHub") {
+            NSWorkspace.shared.open(repoURL)
+        }
+        Divider()
+
+        Toggle("Enabled", isOn: $state.isEnabled)
+        Toggle("Auto Update", isOn: $state.autoUpdate)
         Divider()
 
         if state.lastOriginalText != nil {
-            Button("元のテキストをコピー") {
+            Button("Copy Original Text") {
                 state.copyOriginalText()
             }
             Divider()
         }
 
         if state.recentDetections.isEmpty {
-            Text("検出履歴なし")
+            Text("No detections")
                 .foregroundStyle(.secondary)
         } else {
-            Text("直近の検出:")
+            Text("Recent:")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             ForEach(state.recentDetections.prefix(5)) { record in
@@ -29,7 +39,18 @@ struct MenuBarView: View {
         }
 
         Divider()
-        Button("終了") {
+        if let version = state.secretlintVersion {
+            Text("secretlint v\(version)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        if let status = state.updateStatus {
+            Text(status)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        Divider()
+        Button("Quit") {
             onQuit()
         }
         .keyboardShortcut("q")
