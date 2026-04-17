@@ -11,8 +11,10 @@ actor SecretScanner {
     private let configJSON: String
 
     init() {
-        if let resourcePath = Bundle.main.resourcePath {
-            self.binaryPath = "\(resourcePath)/Resources/secretlint"
+        if let url = Bundle.module.url(forResource: "secretlint", withExtension: nil, subdirectory: "Resources") {
+            self.binaryPath = url.path
+        } else if let resourcePath = Bundle.main.resourcePath {
+            self.binaryPath = "\(resourcePath)/secretlint"
         } else {
             self.binaryPath = "secretlint"
         }
