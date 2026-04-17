@@ -1,0 +1,27 @@
+name: Release
+on:
+  push:
+    tags:
+      - "v*"
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Download secretlint binary
+        run: bash scripts/download-secretlint.sh 11.7.1
+      - name: Build .app bundle
+        run: bash scripts/build-app.sh
+      - name: Create zip
+        run: |
+          cd .build
+          zip -r SecureClipboard.app.zip SecureClipboard.app
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          files: .build/SecureClipboard.app.zip
+          generate_release_notes: true
