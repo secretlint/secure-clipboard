@@ -44,7 +44,32 @@ SecureClipboard uses secretlint for scanning. You can customize rules via the me
 
 Config file location: `~/.config/secure-clipboard/.secretlintrc.json`
 
-Default config includes `@secretlint/secretlint-rule-preset-recommend` and `@secretlint/secretlint-rule-pattern`. See [secretlint rules](https://github.com/secretlint/secretlint#rules) for available rules.
+Default config includes `@secretlint/secretlint-rule-preset-recommend` and `@secretlint/secretlint-rule-pattern`.
+
+You can add custom patterns to detect arbitrary text using `@secretlint/secretlint-rule-pattern`:
+
+```json
+{
+    "rules": [
+        {
+            "id": "@secretlint/secretlint-rule-preset-recommend"
+        },
+        {
+            "id": "@secretlint/secretlint-rule-pattern",
+            "options": {
+                "patterns": [
+                    {
+                        "name": "credentials",
+                        "pattern": "/MY_SECRET_VALUE/"
+                    }
+                ]
+            }
+        }
+    ]
+}
+```
+
+Config changes are picked up on the next clipboard copy — no restart required. See [secretlint rules](https://github.com/secretlint/secretlint#rules) for all available rules.
 
 ## Development
 
