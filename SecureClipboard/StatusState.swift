@@ -58,9 +58,38 @@ final class StatusState {
         }
     }
 
-    func copyOriginalText() {
+    /// 元のテキストを現在のアプリにキー入力としてペーストする。
+    /// クリップボードを経由しないため、再マスクされない。
+    func pasteOriginalText() {
         guard let text = lastOriginalText else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
+        // 一時的にクリップボードを元テキストに差し替え、Cmd+Vをシミュレート、その後マスク済みに戻す
+        let pasteboard = NSPasteboard.general
+        let previousContents = pasteboard.string(forType: .string)
+        let previousChangeCount = pasteboard.changeCount
+
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        // Cmd+V をシミュレート
+        let source = CGEventSource(stateID: .hidSystemState)
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true) // 0x09 = V
+        keyDown?.flags = .maskCommand
+        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false)
+        keyUp?.flags = .maskCommand
+        keyDown?.post(tap: .cghidEventTap)
+        keyUp?.post(tap: .cghidEventTap)
+
+        // 少し待ってからクリップボードを元に戻す
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            pasteboard.clearContents()
+            if let prev = previousContents {
+                pasteboard.setString(prev, forType: .string)
+            }
+            // ClipboardMonitorに自身の変更として通知するためonPasteを呼ぶ
+            self.onPaste?(pasteboard.changeCount)
+        }
     }
+
+    /// ClipboardMonitorが自身の変更を記録するためのコールバック
+    var onPaste: ((Int) -> Void)?
 }

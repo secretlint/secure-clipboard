@@ -9,8 +9,8 @@ struct MenuBarView: View {
         Divider()
 
         if state.lastOriginalText != nil {
-            Button("元のテキストをコピー") {
-                state.copyOriginalText()
+            Button("元のテキストをペースト") {
+                state.pasteOriginalText()
             }
             Divider()
         }

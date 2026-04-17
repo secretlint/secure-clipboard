@@ -22,6 +22,9 @@ struct SecureClipboardApp: App {
         let statusState = StatusState()
         _state = State(initialValue: statusState)
         let m = ClipboardMonitor(state: statusState)
+        statusState.onPaste = { changeCount in
+            m.recordOwnChange(changeCount: changeCount)
+        }
         _monitor = State(initialValue: m)
         m.start()
     }
