@@ -37,7 +37,7 @@ struct SecureClipboardApp: App {
             }
             guard statusState.autoUpdate else {
                 await MainActor.run {
-                    statusState.updateStatus = "Auto update disabled"
+                    statusState.updateStatus = String(localized: "update.disabled", bundle: .module)
                 }
                 return
             }
@@ -45,14 +45,14 @@ struct SecureClipboardApp: App {
             await MainActor.run {
                 switch result {
                 case .upToDate(let version):
-                    statusState.updateStatus = "Up to date (v\(version))"
+                    statusState.updateStatus = String(localized: "update.up_to_date \(version)", bundle: .module)
                 case .updated(let from, let to):
-                    statusState.updateStatus = "Updated (v\(from) → v\(to))"
+                    statusState.updateStatus = String(localized: "update.updated \(from) \(to)", bundle: .module)
                     statusState.secretlintVersion = to
                 case .skipped(let reason):
                     statusState.updateStatus = reason
                 case .failed(let error):
-                    statusState.updateStatus = "Update check failed: \(error)"
+                    statusState.updateStatus = String(localized: "update.failed \(error)", bundle: .module)
                 }
             }
         }

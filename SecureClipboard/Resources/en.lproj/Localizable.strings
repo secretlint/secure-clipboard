@@ -1,0 +1,22 @@
+/* Menu */
+"menu.enabled" = "Enabled";
+"menu.auto_update" = "Auto Update";
+"menu.copy_original" = "Copy Original Text";
+"menu.no_detections" = "No detections";
+"menu.recent" = "Recent:";
+"menu.quit" = "Quit";
+
+/* Notifications */
+"notification.text_masked" = "Masked secrets in clipboard text";
+"notification.image_detected" = "Secrets detected in clipboard image";
+
+/* Detection summaries */
+"detection.text_masked" = "Masked secrets in text";
+"detection.image_detected" = "Detected secrets in image";
+
+/* Update */
+"update.up_to_date" = "Up to date (v%@)";
+"update.updated" = "Updated (v%@ → v%@)";
+"update.disabled" = "Auto update disabled";
+"update.failed" = "Update check failed: %@";
+"update.version_failed" = "Failed to get version";

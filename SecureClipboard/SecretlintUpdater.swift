@@ -70,7 +70,7 @@ actor SecretlintUpdater {
         do {
             guard let current = await currentVersion() else {
                 logger.warning("Could not determine current version")
-                return .skipped(reason: "Failed to get version")
+                return .skipped(reason: String(localized: "update.version_failed", bundle: .module))
             }
 
             let latest = try await latestVersion()

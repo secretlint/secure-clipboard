@@ -7,29 +7,22 @@ struct MenuBarView: View {
     private let repoURL = URL(string: "https://github.com/secretlint/secure-clipboard")!
 
     var body: some View {
-        Text("SecureClipboard")
-            .font(.headline)
-        Button("GitHub") {
-            NSWorkspace.shared.open(repoURL)
-        }
-        Divider()
-
-        Toggle("Enabled", isOn: $state.isEnabled)
-        Toggle("Auto Update", isOn: $state.autoUpdate)
+        Toggle(String(localized: "menu.enabled", bundle: .module), isOn: $state.isEnabled)
+        Toggle(String(localized: "menu.auto_update", bundle: .module), isOn: $state.autoUpdate)
         Divider()
 
         if state.lastOriginalText != nil {
-            Button("Copy Original Text") {
+            Button(String(localized: "menu.copy_original", bundle: .module)) {
                 state.copyOriginalText()
             }
             Divider()
         }
 
         if state.recentDetections.isEmpty {
-            Text("No detections")
+            Text("menu.no_detections", bundle: .module)
                 .foregroundStyle(.secondary)
         } else {
-            Text("Recent:")
+            Text("menu.recent", bundle: .module)
                 .font(.caption)
                 .foregroundStyle(.secondary)
             ForEach(state.recentDetections.prefix(5)) { record in
@@ -50,7 +43,11 @@ struct MenuBarView: View {
                 .foregroundStyle(.secondary)
         }
         Divider()
-        Button("Quit") {
+        Button("SecureClipboard") {
+            NSWorkspace.shared.open(repoURL)
+        }
+        .font(.caption)
+        Button(String(localized: "menu.quit", bundle: .module)) {
             onQuit()
         }
         .keyboardShortcut("q")

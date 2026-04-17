@@ -1,0 +1,22 @@
+/* Menu */
+"menu.enabled" = "有効";
+"menu.auto_update" = "自動更新";
+"menu.copy_original" = "元のテキストをコピー";
+"menu.no_detections" = "検出履歴なし";
+"menu.recent" = "直近の検出:";
+"menu.quit" = "終了";
+
+/* Notifications */
+"notification.text_masked" = "クリップボードのシークレットをマスクしました";
+"notification.image_detected" = "クリップボードの画像にシークレットが含まれています";
+
+/* Detection summaries */
+"detection.text_masked" = "テキスト内のシークレットをマスクしました";
+"detection.image_detected" = "画像内のシークレットを検出しました";
+
+/* Update */
+"update.up_to_date" = "最新 (v%@)";
+"update.updated" = "更新済み (v%@ → v%@)";
+"update.disabled" = "自動更新は無効です";
+"update.failed" = "更新チェック失敗: %@";
+"update.version_failed" = "バージョン取得失敗";

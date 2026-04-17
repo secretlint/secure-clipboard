@@ -3,13 +3,14 @@ import PackageDescription
 
 let package = Package(
     name: "SecureClipboard",
+    defaultLocalization: "en",
     platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(
             name: "SecureClipboard",
             path: "SecureClipboard",
             resources: [
-                .copy("Resources")
+                .process("Resources")
             ]
         ),
         .testTarget(

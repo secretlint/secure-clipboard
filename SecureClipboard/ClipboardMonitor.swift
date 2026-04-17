@@ -76,10 +76,10 @@ final class ClipboardMonitor {
                 recordOwnChange(changeCount: newChangeCount)
                 lastChangeCount = newChangeCount
                 state.recordDetection(
-                    summary: "テキスト内のシークレットをマスクしました",
+                    summary: String(localized: "detection.text_masked", bundle: .module),
                     originalText: result.originalText
                 )
-                sendNotification(title: "SecureClipboard", body: "クリップボードのシークレットをマスクしました")
+                sendNotification(title: "SecureClipboard", body: String(localized: "notification.text_masked", bundle: .module))
             }
         } catch {
             logger.error("Secret scan failed: \(error)")
@@ -95,10 +95,10 @@ final class ClipboardMonitor {
                 recordOwnChange(changeCount: newChangeCount)
                 lastChangeCount = newChangeCount
                 state.recordDetection(
-                    summary: "画像内のシークレットを検出しました",
+                    summary: String(localized: "detection.image_detected", bundle: .module),
                     originalImage: image
                 )
-                sendNotification(title: "SecureClipboard", body: "クリップボードの画像にシークレットが含まれています")
+                sendNotification(title: "SecureClipboard", body: String(localized: "notification.image_detected", bundle: .module))
             }
         } catch {
             logger.error("Image secret detection failed: \(error)")
