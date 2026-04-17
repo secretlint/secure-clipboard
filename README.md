@@ -17,6 +17,7 @@ open /Applications/SecureClipboard.app
 - Text: scans with secretlint, replaces secrets with `***`
 - Image: OCR via Vision framework, scans extracted text, replaces with warning image
 - Menu bar icon turns red on detection with macOS notification
+- "Copy Original Text" menu item to retrieve unmasked content (available for 30 seconds after detection)
 - Auto-updates secretlint binary from GitHub releases
 - Localized (English / Japanese)
 
