@@ -69,6 +69,8 @@ final class StatusState {
 
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+        // この書き換えをMonitorにスキップさせる
+        onPaste?(pasteboard.changeCount)
 
         // Cmd+V をシミュレート
         let source = CGEventSource(stateID: .hidSystemState)
