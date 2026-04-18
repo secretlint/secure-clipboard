@@ -15,9 +15,10 @@ open /Applications/SecureClipboard.app
 
 - Monitors clipboard changes (500ms polling)
 - Text: scans with secretlint, replaces secrets with `***`
-- Image: OCR via Vision framework, scans extracted text, replaces with warning image
+- Image: OCR via Vision framework, scans extracted text, redacts secret regions with natural-looking crystallize + blur effect
 - Menu bar icon turns red on detection with macOS notification
 - "Copy Original Text" menu item to retrieve unmasked content (available for 30 seconds after detection)
+- CLI tools: `secure-pbpaste` and `secure-pbcopy` bundled in the app
 - Auto-updates secretlint binary from GitHub releases
 - Localized (English / Japanese)
 
