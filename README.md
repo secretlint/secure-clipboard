@@ -2,6 +2,12 @@
 
 macOS menu bar app that automatically scans clipboard content with [secretlint](https://github.com/secretlint/secretlint) and masks detected secrets. Secure by default.
 
+## Motivation
+
+Secrets copied to the clipboard can accidentally end up in unintended places — a Linear issue title, a Slack message, a search bar. You don't always notice what's in your clipboard before pasting. SecureClipboard masks secrets at the moment of copy, so even accidental pastes are safe.
+
+When you intentionally need the raw value, select "Copy Original Text" from the menu bar to retrieve the unmasked content. This two-step process ensures secrets are only exposed when you explicitly choose to.
+
 ## Install
 
 ```bash
