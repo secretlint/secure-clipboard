@@ -30,7 +30,7 @@ rm -f /usr/local/bin/secure-pbpaste /usr/local/bin/secure-pbcopy
 - Text: scans with secretlint, replaces secrets with `***`
 - Image: OCR via Vision framework, scans extracted text, redacts secret regions with natural-looking crystallize + blur effect
 - Menu bar icon turns red on detection with macOS notification
-- "Copy Original Text" menu item to retrieve unmasked content (available for 30 seconds after detection)
+- "Copy Original Text" menu item to retrieve unmasked content (auto-cleared after 90 seconds)
 - CLI tools: `secure-pbpaste` and `secure-pbcopy` bundled in the app
 - Auto-updates secretlint binary from GitHub releases
 - Localized (English / Japanese)
@@ -51,7 +51,7 @@ After copying, your clipboard will contain:
 *********************************************************
 ```
 
-If you need the raw (unmasked) text, click the menu bar icon and select "Copy Original Text". This is available for 30 seconds after detection.
+If you need the raw (unmasked) text, click the menu bar icon and select "Copy Original Text". The clipboard is automatically cleared after 90 seconds.
 
 Supported secret types: AWS, GitHub, Slack, GCP, Azure, npm, Docker, and [more](https://github.com/secretlint/secretlint/tree/master/packages/%40secretlint/secretlint-rule-preset-recommend#rules). You can also define custom patterns.
 
