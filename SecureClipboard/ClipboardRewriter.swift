@@ -32,7 +32,7 @@ struct ClipboardRewriter {
         return pasteboard.changeCount
     }
 
-    /// Pixellate then blur secret regions for natural-looking redaction
+    /// Fill secret regions with background color, then crystallize + blur for natural redaction
     private func redactRegions(image: NSImage, regions: [CGRect]) -> NSImage {
         guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             return createWarningImage(size: image.size)
@@ -44,24 +44,35 @@ struct ClipboardRewriter {
         let scaleY = CGFloat(cgImage.height) / image.size.height
         let padding: CGFloat = 4
 
-        // Crystallize (irregular polygonal cells) + blur for natural-looking redaction
+        // Step 1: Paint over text with sampled background color per region
+        var painted = ciImage
+        for region in regions {
+            let pixelRect = CGRect(
+                x: (region.origin.x - padding) * scaleX,
+                y: (region.origin.y - padding) * scaleY,
+                width: (region.size.width + padding * 2) * scaleX,
+                height: (region.size.height + padding * 2) * scaleY
+            )
+            // Sample background color from the edge of the region
+            let bgColor = sampleEdgeColor(image: cgImage, rect: pixelRect)
+            let colorFill = CIImage(color: bgColor).cropped(to: pixelRect)
+            let maskImage = CIImage(color: .white).cropped(to: pixelRect)
+            if let blendFilter = CIFilter(name: "CIBlendWithMask") {
+                blendFilter.setValue(colorFill, forKey: kCIInputImageKey)
+                blendFilter.setValue(painted, forKey: kCIInputBackgroundImageKey)
+                blendFilter.setValue(maskImage, forKey: kCIInputMaskImageKey)
+                if let output = blendFilter.outputImage {
+                    painted = output
+                }
+            }
+        }
+
+        // Step 2: Crystallize + blur the painted image, then composite back
         guard let crystallizeFilter = CIFilter(name: "CICrystallize"),
               let blurFilter = CIFilter(name: "CIGaussianBlur") else {
             return createWarningImage(size: image.size)
         }
-        crystallizeFilter.setValue(ciImage, forKey: kCIInputImageKey)
-        crystallizeFilter.setValue(15.0, forKey: kCIInputRadiusKey)
-        guard let crystallized = crystallizeFilter.outputImage else {
-            return createWarningImage(size: image.size)
-        }
-        blurFilter.setValue(crystallized, forKey: kCIInputImageKey)
-        blurFilter.setValue(6.0, forKey: kCIInputRadiusKey)
-        guard let redactedVersion = blurFilter.outputImage else {
-            return createWarningImage(size: image.size)
-        }
 
-        // Composite: use redacted version only in secret regions
-        // Use different crystallize center per region to prevent pattern-based recovery
         var composited = ciImage
         for region in regions {
             let pixelRect = CGRect(
@@ -72,13 +83,16 @@ struct ClipboardRewriter {
             )
 
             // Randomize crystallize center per region
-            let randomCenter = CIVector(
+            crystallizeFilter.setValue(painted, forKey: kCIInputImageKey)
+            crystallizeFilter.setValue(15.0, forKey: kCIInputRadiusKey)
+            crystallizeFilter.setValue(CIVector(
                 x: CGFloat.random(in: 0...CGFloat(cgImage.width)),
                 y: CGFloat.random(in: 0...CGFloat(cgImage.height))
-            )
-            crystallizeFilter.setValue(randomCenter, forKey: kCIInputCenterKey)
+            ), forKey: kCIInputCenterKey)
             guard let regionCrystallized = crystallizeFilter.outputImage else { continue }
+
             blurFilter.setValue(regionCrystallized, forKey: kCIInputImageKey)
+            blurFilter.setValue(6.0, forKey: kCIInputRadiusKey)
             guard let regionRedacted = blurFilter.outputImage else { continue }
 
             let maskImage = CIImage(color: .white).cropped(to: pixelRect)
@@ -97,6 +111,41 @@ struct ClipboardRewriter {
             return createWarningImage(size: image.size)
         }
         return NSImage(cgImage: outputCGImage, size: image.size)
+    }
+
+    /// Sample the average color from the edges of a rect (background, not text)
+    private func sampleEdgeColor(image: CGImage, rect: CGRect) -> CIColor {
+        let clampedRect = rect.intersection(CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        guard !clampedRect.isEmpty else { return CIColor.gray }
+
+        // Sample a thin strip at the top edge of the region
+        let stripHeight = max(2, Int(clampedRect.height * 0.1))
+        let sampleRect = CGRect(
+            x: clampedRect.origin.x,
+            y: clampedRect.maxY - CGFloat(stripHeight),
+            width: clampedRect.width,
+            height: CGFloat(stripHeight)
+        ).intersection(CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        guard !sampleRect.isEmpty,
+              let cropped = image.cropping(to: sampleRect) else { return CIColor.gray }
+
+        // Get average color using a 1x1 resize
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        var pixel: [UInt8] = [0, 0, 0, 0]
+        guard let ctx = CGContext(
+            data: &pixel, width: 1, height: 1,
+            bitsPerComponent: 8, bytesPerRow: 4,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return CIColor.gray }
+        ctx.interpolationQuality = .high
+        ctx.draw(cropped, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+
+        return CIColor(
+            red: CGFloat(pixel[0]) / 255.0,
+            green: CGFloat(pixel[1]) / 255.0,
+            blue: CGFloat(pixel[2]) / 255.0
+        )
     }
 
     private func createWarningImage(size: NSSize) -> NSImage {
