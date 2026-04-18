@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# secure-pbpaste: pbpaste with secretlint masking
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Find secretlint binary in the app bundle
+SECRETLINT="${SCRIPT_DIR}/../Resources/SecureClipboard_SecureClipboard.bundle/Resources/secretlint"
+if [ ! -x "$SECRETLINT" ]; then
+    SECRETLINT="${SCRIPT_DIR}/SecureClipboard_SecureClipboard.bundle/Resources/secretlint"
+fi
+if [ ! -x "$SECRETLINT" ]; then
+    echo "Error: secretlint binary not found" >&2
+    exit 1
+fi
+
+CONFIG_PATH="${HOME}/.config/secure-clipboard/.secretlintrc.json"
+DEFAULT_CONFIG='{"rules":[{"id":"@secretlint/secretlint-rule-preset-recommend"},{"id":"@secretlint/secretlint-rule-pattern"}]}'
+
+if [ -f "$CONFIG_PATH" ]; then
+    CONFIG=$(cat "$CONFIG_PATH")
+else
+    CONFIG="$DEFAULT_CONFIG"
+fi
+
+# secretlint exits 1 when secrets found (not an error)
+pbpaste | "$SECRETLINT" --stdinFileName clipboard.txt --format mask-result --secretlintrcJSON "$CONFIG" 2>/dev/null || true

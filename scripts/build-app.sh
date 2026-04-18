@@ -24,6 +24,10 @@ cp -R ".build/release/${APP_NAME}_${APP_NAME}.bundle" "${APP_DIR}/"
 # Also copy next to binary as fallback
 cp -R ".build/release/${APP_NAME}_${APP_NAME}.bundle" "${MACOS}/"
 
+# Copy CLI tools
+cp SecureClipboard/cli/secure-pbpaste "${MACOS}/"
+cp SecureClipboard/cli/secure-pbcopy "${MACOS}/"
+
 # Create Info.plist
 cat > "${CONTENTS}/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>

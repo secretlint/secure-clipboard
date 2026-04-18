@@ -77,6 +77,19 @@ You can add custom patterns to detect arbitrary text:
 
 Config changes are picked up on the next clipboard copy — no restart required.
 
+## CLI Tools
+
+SecureClipboard bundles `secure-pbpaste` and `secure-pbcopy` — drop-in replacements for `pbpaste` and `pbcopy` that automatically mask secrets.
+
+```bash
+# Add to PATH (after installing the app)
+export PATH="/Applications/SecureClipboard.app/Contents/MacOS:$PATH"
+
+# Usage
+secure-pbpaste              # outputs clipboard text with secrets masked
+echo "text" | secure-pbcopy # copies text to clipboard with secrets masked
+```
+
 ## Development
 
 ```bash
