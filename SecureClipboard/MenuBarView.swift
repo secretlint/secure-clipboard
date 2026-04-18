@@ -25,6 +25,9 @@ struct MenuBarView: View {
         Button(String(localized: "menu.open_secretlintrc", bundle: .module)) {
             openConfig()
         }
+        Button(String(localized: "menu.install_cli", bundle: .module)) {
+            installCLITools()
+        }
         Divider()
 
         if state.lastOriginalText != nil {
@@ -67,6 +70,35 @@ struct MenuBarView: View {
             onQuit()
         }
         .keyboardShortcut("q")
+    }
+
+    private func installCLITools() {
+        let binDir = "/usr/local/bin"
+        guard let appPath = Bundle.main.bundlePath as String? else { return }
+        let macosDir = "\(appPath)/Contents/MacOS"
+        let tools = ["secure-pbpaste", "secure-pbcopy"]
+
+        // Create symlinks via AppleScript to get admin privileges
+        let commands = tools.map { tool in
+            "ln -sf '\(macosDir)/\(tool)' '\(binDir)/\(tool)'"
+        }.joined(separator: " && ")
+
+        let script = "do shell script \"mkdir -p \(binDir) && \(commands)\" with administrator privileges"
+        var error: NSDictionary?
+        if let appleScript = NSAppleScript(source: script) {
+            appleScript.executeAndReturnError(&error)
+            if let error {
+                let alert = NSAlert()
+                alert.messageText = "Install Failed"
+                alert.informativeText = error[NSAppleScript.errorMessage] as? String ?? "Unknown error"
+                alert.runModal()
+            } else {
+                let alert = NSAlert()
+                alert.messageText = "CLI Tools Installed"
+                alert.informativeText = "secure-pbpaste and secure-pbcopy are now available in \(binDir)"
+                alert.runModal()
+            }
+        }
     }
 
     private func openConfig() {

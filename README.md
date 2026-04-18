@@ -81,11 +81,18 @@ Config changes are picked up on the next clipboard copy — no restart required.
 
 SecureClipboard bundles `secure-pbpaste` and `secure-pbcopy` — drop-in replacements for `pbpaste` and `pbcopy` that automatically mask secrets.
 
-```bash
-# Add to PATH (after installing the app)
-export PATH="/Applications/SecureClipboard.app/Contents/MacOS:$PATH"
+Install via menu bar: click the SecureClipboard icon → "Install CLI Tools". This creates symlinks in `/usr/local/bin/` (requires admin password).
 
-# Usage
+Or manually:
+
+```bash
+ln -sf /Applications/SecureClipboard.app/Contents/MacOS/secure-pbpaste /usr/local/bin/secure-pbpaste
+ln -sf /Applications/SecureClipboard.app/Contents/MacOS/secure-pbcopy /usr/local/bin/secure-pbcopy
+```
+
+Usage:
+
+```bash
 secure-pbpaste              # outputs clipboard text with secrets masked
 echo "text" | secure-pbcopy # copies text to clipboard with secrets masked
 ```

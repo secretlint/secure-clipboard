@@ -5,6 +5,7 @@
 "menu.no_detections" = "No detections";
 "menu.recent" = "Recent:";
 "menu.open_secretlintrc" = "Open .secretlintrc.json";
+"menu.install_cli" = "Install CLI Tools";
 "menu.quit" = "Quit";
 
 /* Notifications */
