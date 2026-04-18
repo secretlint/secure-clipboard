@@ -80,8 +80,8 @@ secretlint rules for detecting known secrets. `@secretlint/secretlint-rule-prese
 
 Custom patterns with two actions:
 
-- `"action": "mask"` — matched text is replaced with `***` (uses secretlint's [rule-pattern](https://github.com/secretlint/secretlint/tree/master/packages/%40secretlint/secretlint-rule-pattern) internally)
-- `"action": "discard"` — entire clipboard content is discarded when pattern matches
+- `"action": "mask"` — matched text is replaced with `***`, the rest of the clipboard content is preserved. Uses secretlint's [rule-pattern](https://github.com/secretlint/secretlint/tree/master/packages/%40secretlint/secretlint-rule-pattern) internally.
+- `"action": "discard"` — entire clipboard content is replaced with `[DISCARDED: <name>]` when pattern matches. Unlike mask, nothing from the original content is preserved. Checked before secretlint runs.
 
 Patterns use `/regex/flags` syntax. Supported flags: `i` (case-insensitive), `m` (multiline), `s` (dotAll).
 
