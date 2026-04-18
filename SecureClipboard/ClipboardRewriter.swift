@@ -32,7 +32,7 @@ struct ClipboardRewriter {
         return pasteboard.changeCount
     }
 
-    /// Blur secret regions on the original image so they blend naturally
+    /// Pixellate then blur secret regions for natural-looking redaction
     private func redactRegions(image: NSImage, regions: [CGRect]) -> NSImage {
         guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             return createWarningImage(size: image.size)
@@ -40,28 +40,30 @@ struct ClipboardRewriter {
 
         let ciImage = CIImage(cgImage: cgImage)
         let context = CIContext()
-        let blurRadius: CGFloat = 10
-        let padding: CGFloat = 2
+        let scaleX = CGFloat(cgImage.width) / image.size.width
+        let scaleY = CGFloat(cgImage.height) / image.size.height
+        let padding: CGFloat = 4
 
-        // Create a fully blurred version of the image
-        guard let blurFilter = CIFilter(name: "CIGaussianBlur") else {
+        // Crystallize (irregular polygonal cells) + blur for natural-looking redaction
+        guard let crystallizeFilter = CIFilter(name: "CICrystallize"),
+              let blurFilter = CIFilter(name: "CIGaussianBlur") else {
             return createWarningImage(size: image.size)
         }
-        blurFilter.setValue(ciImage, forKey: kCIInputImageKey)
-        blurFilter.setValue(blurRadius, forKey: kCIInputRadiusKey)
-        guard let blurredImage = blurFilter.outputImage else {
+        crystallizeFilter.setValue(ciImage, forKey: kCIInputImageKey)
+        crystallizeFilter.setValue(15.0, forKey: kCIInputRadiusKey)
+        guard let crystallized = crystallizeFilter.outputImage else {
+            return createWarningImage(size: image.size)
+        }
+        blurFilter.setValue(crystallized, forKey: kCIInputImageKey)
+        blurFilter.setValue(6.0, forKey: kCIInputRadiusKey)
+        guard let redactedVersion = blurFilter.outputImage else {
             return createWarningImage(size: image.size)
         }
 
-        // Composite: use blurred version for secret regions, original for the rest
+        // Composite: use redacted version only in secret regions
+        // Use different crystallize center per region to prevent pattern-based recovery
         var composited = ciImage
-        let imageHeight = CGFloat(cgImage.height)
-
         for region in regions {
-            // Vision coordinates have origin at bottom-left, CIImage too — matches directly
-            // But we need to convert from NSImage coordinates to pixel coordinates
-            let scaleX = CGFloat(cgImage.width) / image.size.width
-            let scaleY = CGFloat(cgImage.height) / image.size.height
             let pixelRect = CGRect(
                 x: (region.origin.x - padding) * scaleX,
                 y: (region.origin.y - padding) * scaleY,
@@ -69,13 +71,19 @@ struct ClipboardRewriter {
                 height: (region.size.height + padding * 2) * scaleY
             )
 
-            // Create a mask for this region
-            let maskImage = CIImage(color: .white).cropped(to: pixelRect)
-            let invertMask = CIImage(color: .white).cropped(to: ciImage.extent)
+            // Randomize crystallize center per region
+            let randomCenter = CIVector(
+                x: CGFloat.random(in: 0...CGFloat(cgImage.width)),
+                y: CGFloat.random(in: 0...CGFloat(cgImage.height))
+            )
+            crystallizeFilter.setValue(randomCenter, forKey: kCIInputCenterKey)
+            guard let regionCrystallized = crystallizeFilter.outputImage else { continue }
+            blurFilter.setValue(regionCrystallized, forKey: kCIInputImageKey)
+            guard let regionRedacted = blurFilter.outputImage else { continue }
 
-            // Blend: blurred in the masked region, original elsewhere
+            let maskImage = CIImage(color: .white).cropped(to: pixelRect)
             if let blendFilter = CIFilter(name: "CIBlendWithMask") {
-                blendFilter.setValue(blurredImage, forKey: kCIInputImageKey)
+                blendFilter.setValue(regionRedacted, forKey: kCIInputImageKey)
                 blendFilter.setValue(composited, forKey: kCIInputBackgroundImageKey)
                 blendFilter.setValue(maskImage, forKey: kCIInputMaskImageKey)
                 if let output = blendFilter.outputImage {
@@ -84,7 +92,6 @@ struct ClipboardRewriter {
             }
         }
 
-        // Render back to NSImage
         let outputExtent = ciImage.extent
         guard let outputCGImage = context.createCGImage(composited, from: outputExtent) else {
             return createWarningImage(size: image.size)
