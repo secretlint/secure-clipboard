@@ -46,5 +46,7 @@
 - Use `String(localized:bundle:)` for localized strings in code
 - secretlint binary path resolved via `Bundle.module.url(forResource:withExtension:subdirectory:)`
 - All UI strings defined in `Resources/{lang}.lproj/Localizable.strings`
-- User config: `~/.config/secure-clipboard/.secretlintrc.json`
-- Bundled secretlint rules: `preset-recommend` and `pattern` only (determined by binary-compiler/package.json)
+- User config: `~/.config/secure-clipboard/config.json`
+- Bundled secretlint rules: `preset-recommend` and `pattern` (pattern is dynamically added when mask patterns are configured)
+- Custom patterns with `action: "mask"` are passed to secretlint as `rule-pattern` options
+- Custom patterns with `action: "discard"` trigger full clipboard discard (detected via `--format=json` name matching)

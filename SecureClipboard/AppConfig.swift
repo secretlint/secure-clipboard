@@ -70,7 +70,7 @@ struct AppConfig: Codable {
         let config: [String: Any] = ["rules": allRules]
         guard let data = try? JSONSerialization.data(withJSONObject: config),
               let json = String(data: data, encoding: .utf8) else {
-            return AppConfig.default.secretlintrcJSON()
+            return "{\"rules\":[{\"id\":\"@secretlint/secretlint-rule-preset-recommend\"}]}"
         }
         return json
     }

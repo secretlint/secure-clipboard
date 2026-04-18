@@ -19,11 +19,21 @@ if [ ! -x "$SECRETLINT" ]; then
     exit 1
 fi
 
-CONFIG_PATH="${HOME}/.config/secure-clipboard/.secretlintrc.json"
-DEFAULT_CONFIG='{"rules":[{"id":"@secretlint/secretlint-rule-preset-recommend"},{"id":"@secretlint/secretlint-rule-pattern"}]}'
+CONFIG_FILE="${HOME}/.config/secure-clipboard/config.json"
+DEFAULT_CONFIG='{"rules":[{"id":"@secretlint/secretlint-rule-preset-recommend"}]}'
 
-if [ -f "$CONFIG_PATH" ]; then
-    CONFIG=$(cat "$CONFIG_PATH")
+# Extract rules from config.json using python3 (available on macOS by default)
+if [ -f "$CONFIG_FILE" ]; then
+    CONFIG=$(python3 -c "
+import json, sys
+with open('$CONFIG_FILE') as f:
+    cfg = json.load(f)
+rules = cfg.get('rules', [])
+patterns = [p for p in cfg.get('patterns', []) if p.get('action') == 'mask']
+if patterns:
+    rules.append({'id': '@secretlint/secretlint-rule-pattern', 'options': {'patterns': [{'name': p['name'], 'pattern': p['pattern']} for p in patterns]}})
+print(json.dumps({'rules': rules}))
+" 2>/dev/null || echo "$DEFAULT_CONFIG")
 else
     CONFIG="$DEFAULT_CONFIG"
 fi
