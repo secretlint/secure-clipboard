@@ -45,43 +45,35 @@ actor SecretScanner {
         self.fixedConfigJSON = configJSON
     }
 
-    /// Load config on every call so file changes are picked up without restart
-    private var config: AppConfig {
-        AppConfig.load()
-    }
-
-    private var configJSON: String {
-        if let fixed = fixedConfigJSON { return fixed }
-        return config.secretlintrcJSON()
-    }
-
     func scan(text: String) async throws -> ScanResult {
-        let currentConfig = config
+        let currentConfig = AppConfig.load()
         let currentConfigJSON = fixedConfigJSON ?? currentConfig.secretlintrcJSON()
 
-        // Step 1: Run secretlint with --format=json to detect matches
-        let jsonOutput = try await runSecretlint(input: text, format: "json", configJSON: currentConfigJSON)
-
-        // Parse JSON to find matched rule names
-        let matchedNames = parseMatchedNames(jsonOutput)
-
-        if matchedNames.isEmpty {
-            return ScanResult(action: .none, originalText: text)
-        }
-
-        // Step 2: Check if any matched name is a discard pattern
+        // Check if discard patterns exist
         let discardPatternNames = Set(
             (currentConfig.patterns ?? [])
                 .filter { $0.action == .discard }
                 .map(\.name)
         )
-        for name in matchedNames {
-            if discardPatternNames.contains(name) {
-                return ScanResult(action: .discard(patternName: name), originalText: text)
+        let hasDiscardPatterns = !discardPatternNames.isEmpty && fixedConfigJSON == nil
+
+        // Only run JSON step when discard patterns are configured
+        if hasDiscardPatterns {
+            let jsonOutput = try await runSecretlint(input: text, format: "json", configJSON: currentConfigJSON)
+            let matchedNames = parseMatchedNames(jsonOutput)
+
+            if matchedNames.isEmpty {
+                return ScanResult(action: .none, originalText: text)
+            }
+
+            for name in matchedNames {
+                if discardPatternNames.contains(name) {
+                    return ScanResult(action: .discard(patternName: name), originalText: text)
+                }
             }
         }
 
-        // Step 3: Mask — run secretlint with --format=mask-result
+        // Mask — run secretlint with --format=mask-result
         let rawOutput = try await runSecretlint(input: text, format: "mask-result", configJSON: currentConfigJSON)
         let maskedText: String
         if !text.hasSuffix("\n") && rawOutput.hasSuffix("\n") {

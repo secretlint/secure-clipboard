@@ -124,7 +124,20 @@ final class ClipboardMonitor {
     private func scanImage(_ image: NSImage, sourceApp: String?) async {
         do {
             let result = try await imageDetector.detect(image: image)
-            if result.hasSecrets {
+            guard result.hasSecrets else { return }
+
+            switch result.scanAction {
+            case .discard(let patternName):
+                logger.info("Discard pattern matched in image: \(patternName)")
+                let newChangeCount = rewriter.rewriteImageWithWarning(originalSize: image.size)
+                recordOwnChange(changeCount: newChangeCount)
+                lastChangeCount = newChangeCount
+                state.recordDetection(
+                    summary: String(localized: "detection.discarded \(patternName)", bundle: .module),
+                    sourceApp: sourceApp
+                )
+                sendNotification(title: "SecureClipboard", body: String(localized: "notification.discarded \(patternName)", bundle: .module))
+            case .mask:
                 logger.info("Secret detected in clipboard image via OCR")
                 let newChangeCount = rewriter.rewriteImageWithRedaction(original: image, secretBounds: result.secretBounds)
                 recordOwnChange(changeCount: newChangeCount)
@@ -135,6 +148,8 @@ final class ClipboardMonitor {
                     originalImage: image
                 )
                 sendNotification(title: "SecureClipboard", body: String(localized: "notification.image_detected", bundle: .module))
+            case .none:
+                break
             }
         } catch {
             logger.error("Image secret detection failed: \(error)")
