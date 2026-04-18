@@ -42,20 +42,23 @@ struct AppConfig: Codable {
         return config
     }
 
-    /// Convert rules + mask patterns to JSON string for secretlint --secretlintrcJSON
+    /// Convert rules + all patterns to JSON string for secretlint --secretlintrcJSON
     func secretlintrcJSON() -> String {
-        var allRules: [[String: Any]] = rules.map { rule in
-            var dict: [String: Any] = ["id": rule.id]
-            if let options = rule.options {
-                dict["options"] = options.value
+        // Filter out rule-pattern from user rules (managed by patterns config)
+        var allRules: [[String: Any]] = rules
+            .filter { $0.id != "@secretlint/secretlint-rule-pattern" }
+            .map { rule in
+                var dict: [String: Any] = ["id": rule.id]
+                if let options = rule.options {
+                    dict["options"] = options.value
+                }
+                return dict
             }
-            return dict
-        }
 
-        // Add mask patterns as @secretlint/secretlint-rule-pattern options
-        let maskPatterns = (patterns ?? []).filter { $0.action == .mask }
-        if !maskPatterns.isEmpty {
-            let patternOptions: [[String: Any]] = maskPatterns.map { p in
+        // Add all patterns (mask + discard) as @secretlint/secretlint-rule-pattern options
+        let allPatterns = patterns ?? []
+        if !allPatterns.isEmpty {
+            let patternOptions: [[String: Any]] = allPatterns.map { p in
                 ["name": p.name, "pattern": p.pattern]
             }
             allRules.append([
@@ -72,44 +75,11 @@ struct AppConfig: Codable {
         return json
     }
 
-    /// Check if text matches any discard pattern
-    func matchesDiscardPattern(_ text: String) -> Pattern? {
-        guard let patterns else { return nil }
-        for pattern in patterns where pattern.action == .discard {
-            let (regexString, options) = parseRegex(pattern.pattern)
-            if let regex = try? NSRegularExpression(pattern: regexString, options: options),
-               regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil {
-                return pattern
-            }
-        }
-        return nil
-    }
-
     func shouldSkipScan(bundleId: String?) -> Bool {
         guard let bundleId, let ids = skipScanAppIdentifiers else { return false }
         return ids.contains(bundleId)
     }
 
-    /// Parse /pattern/flags format into regex string and NSRegularExpression options
-    private func parseRegex(_ pattern: String) -> (String, NSRegularExpression.Options) {
-        guard pattern.hasPrefix("/") else { return (pattern, []) }
-        let trimmed = String(pattern.dropFirst())
-        guard let lastSlash = trimmed.lastIndex(of: "/") else { return (pattern, []) }
-
-        let regexString = String(trimmed[trimmed.startIndex..<lastSlash])
-        let flags = String(trimmed[trimmed.index(after: lastSlash)...])
-
-        var options: NSRegularExpression.Options = []
-        for flag in flags {
-            switch flag {
-            case "i": options.insert(.caseInsensitive)
-            case "m": options.insert(.anchorsMatchLines)
-            case "s": options.insert(.dotMatchesLineSeparators)
-            default: break
-            }
-        }
-        return (regexString, options)
-    }
 }
 
 /// Type-erased Codable wrapper for arbitrary JSON values

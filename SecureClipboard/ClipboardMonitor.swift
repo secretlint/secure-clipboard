@@ -64,7 +64,7 @@ final class ClipboardMonitor {
                     if let text = pasteboard.string(forType: .string), !text.isEmpty {
                         let semaphore = DispatchSemaphore(value: 0)
                         Task {
-                            await self.processText(text, sourceApp: sourceApp, config: config)
+                            await self.scanText(text, sourceApp: sourceApp)
                             semaphore.signal()
                         }
                         semaphore.wait()
@@ -87,35 +87,24 @@ final class ClipboardMonitor {
         isRunning = false
     }
 
-    private func processText(_ text: String, sourceApp: String?, config: AppConfig) async {
-        // Check discard patterns first (entire content is discarded)
-        if let matched = config.matchesDiscardPattern(text) {
-            logger.info("Discard pattern matched: \(matched.name)")
-            let newChangeCount = rewriter.rewriteText("[DISCARDED: \(matched.name)]")
-            recordOwnChange(changeCount: newChangeCount)
-            lastChangeCount = newChangeCount
-            state.recordDetection(
-                summary: String(localized: "detection.discarded \(matched.name)", bundle: .module),
-                sourceApp: sourceApp,
-                originalText: text
-            )
-            sendNotification(
-                title: "SecureClipboard",
-                body: String(localized: "notification.discarded \(matched.name)", bundle: .module)
-            )
-            return
-        }
-
-        // Then check secretlint rules + mask patterns
-        await scanText(text, sourceApp: sourceApp)
-    }
-
     private func scanText(_ text: String, sourceApp: String?) async {
         do {
             let result = try await scanner.scan(text: text)
-            if result.hasSecrets {
+            switch result.action {
+            case .discard(let patternName):
+                logger.info("Discard pattern matched: \(patternName)")
+                let newChangeCount = rewriter.rewriteText("[DISCARDED: \(patternName)]")
+                recordOwnChange(changeCount: newChangeCount)
+                lastChangeCount = newChangeCount
+                state.recordDetection(
+                    summary: String(localized: "detection.discarded \(patternName)", bundle: .module),
+                    sourceApp: sourceApp,
+                    originalText: result.originalText
+                )
+                sendNotification(title: "SecureClipboard", body: String(localized: "notification.discarded \(patternName)", bundle: .module))
+            case .mask(let maskedText):
                 logger.info("Secret detected in clipboard text")
-                let newChangeCount = rewriter.rewriteText(result.maskedText)
+                let newChangeCount = rewriter.rewriteText(maskedText)
                 recordOwnChange(changeCount: newChangeCount)
                 lastChangeCount = newChangeCount
                 state.recordDetection(
@@ -124,6 +113,8 @@ final class ClipboardMonitor {
                     originalText: result.originalText
                 )
                 sendNotification(title: "SecureClipboard", body: String(localized: "notification.text_masked", bundle: .module))
+            case .none:
+                break
             }
         } catch {
             logger.error("Secret scan failed: \(error)")
