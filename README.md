@@ -11,6 +11,13 @@ xattr -cr /Applications/SecureClipboard.app
 open /Applications/SecureClipboard.app
 ```
 
+## Uninstall
+
+```bash
+rm -rf /Applications/SecureClipboard.app
+rm -f /usr/local/bin/secure-pbpaste /usr/local/bin/secure-pbcopy
+```
+
 ## Features
 
 - Monitors clipboard changes (500ms polling)
