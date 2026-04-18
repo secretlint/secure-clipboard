@@ -32,29 +32,64 @@ struct ClipboardRewriter {
         return pasteboard.changeCount
     }
 
-    /// Draw red rectangles over secret regions on the original image
+    /// Blur secret regions on the original image so they blend naturally
     private func redactRegions(image: NSImage, regions: [CGRect]) -> NSImage {
-        let result = NSImage(size: image.size)
-        result.lockFocus()
-
-        // Draw original image
-        image.draw(in: NSRect(origin: .zero, size: image.size))
-
-        // Draw red overlay on each secret region with padding
-        let padding: CGFloat = 4
-        NSColor(red: 0.9, green: 0.2, blue: 0.2, alpha: 1.0).setFill()
-        for region in regions {
-            let paddedRect = NSRect(
-                x: region.origin.x - padding,
-                y: region.origin.y - padding,
-                width: region.size.width + padding * 2,
-                height: region.size.height + padding * 2
-            )
-            NSBezierPath.fill(paddedRect)
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            return createWarningImage(size: image.size)
         }
 
-        result.unlockFocus()
-        return result
+        let ciImage = CIImage(cgImage: cgImage)
+        let context = CIContext()
+        let blurRadius = max(image.size.width, image.size.height) * 0.03
+        let padding = blurRadius
+
+        // Create a fully blurred version of the image
+        guard let blurFilter = CIFilter(name: "CIGaussianBlur") else {
+            return createWarningImage(size: image.size)
+        }
+        blurFilter.setValue(ciImage, forKey: kCIInputImageKey)
+        blurFilter.setValue(blurRadius, forKey: kCIInputRadiusKey)
+        guard let blurredImage = blurFilter.outputImage else {
+            return createWarningImage(size: image.size)
+        }
+
+        // Composite: use blurred version for secret regions, original for the rest
+        var composited = ciImage
+        let imageHeight = CGFloat(cgImage.height)
+
+        for region in regions {
+            // Vision coordinates have origin at bottom-left, CIImage too — matches directly
+            // But we need to convert from NSImage coordinates to pixel coordinates
+            let scaleX = CGFloat(cgImage.width) / image.size.width
+            let scaleY = CGFloat(cgImage.height) / image.size.height
+            let pixelRect = CGRect(
+                x: (region.origin.x - padding) * scaleX,
+                y: (region.origin.y - padding) * scaleY,
+                width: (region.size.width + padding * 2) * scaleX,
+                height: (region.size.height + padding * 2) * scaleY
+            )
+
+            // Create a mask for this region
+            let maskImage = CIImage(color: .white).cropped(to: pixelRect)
+            let invertMask = CIImage(color: .white).cropped(to: ciImage.extent)
+
+            // Blend: blurred in the masked region, original elsewhere
+            if let blendFilter = CIFilter(name: "CIBlendWithMask") {
+                blendFilter.setValue(blurredImage, forKey: kCIInputImageKey)
+                blendFilter.setValue(composited, forKey: kCIInputBackgroundImageKey)
+                blendFilter.setValue(maskImage, forKey: kCIInputMaskImageKey)
+                if let output = blendFilter.outputImage {
+                    composited = output
+                }
+            }
+        }
+
+        // Render back to NSImage
+        let outputExtent = ciImage.extent
+        guard let outputCGImage = context.createCGImage(composited, from: outputExtent) else {
+            return createWarningImage(size: image.size)
+        }
+        return NSImage(cgImage: outputCGImage, size: image.size)
     }
 
     private func createWarningImage(size: NSSize) -> NSImage {
