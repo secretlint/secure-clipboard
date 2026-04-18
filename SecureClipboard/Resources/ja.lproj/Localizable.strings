@@ -4,17 +4,19 @@
 "menu.copy_original" = "元のテキストをコピー";
 "menu.no_detections" = "検出履歴なし";
 "menu.recent" = "直近の検出:";
-"menu.open_secretlintrc" = ".secretlintrc.json を開く";
+"menu.open_config" = "config.json を開く";
 "menu.install_cli" = "CLIツールをインストール";
 "menu.quit" = "終了";
 
 /* Notifications */
 "notification.text_masked" = "クリップボードのシークレットをマスクしました";
 "notification.image_detected" = "クリップボードの画像にシークレットが含まれています";
+"notification.rejected %@" = "クリップボードを拒否しました: %@";
 
 /* Detection summaries */
 "detection.text_masked" = "テキスト内のシークレットをマスクしました";
 "detection.image_detected" = "画像内のシークレットを検出しました";
+"detection.rejected %@" = "拒否: %@";
 
 /* Update */
 "update.up_to_date" = "最新 (v%@)";

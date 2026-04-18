@@ -10,12 +10,6 @@ actor SecretScanner {
     private let binaryPath: String
     private let fixedConfigJSON: String?
 
-    private static let defaultConfigJSON = """
-    {"rules":[{"id":"@secretlint/secretlint-rule-preset-recommend"},{"id":"@secretlint/secretlint-rule-pattern"}]}
-    """
-
-    private static let userConfigPath = NSHomeDirectory() + "/.config/secure-clipboard/.secretlintrc.json"
-
     init() {
         if let url = Bundle.module.url(forResource: "secretlint", withExtension: nil, subdirectory: "Resources") {
             self.binaryPath = url.path
@@ -32,10 +26,21 @@ actor SecretScanner {
         self.fixedConfigJSON = configJSON
     }
 
+    private static let legacyConfigPath = NSHomeDirectory() + "/.config/secure-clipboard/.secretlintrc.json"
+    private static let defaultConfigJSON = """
+    {"rules":[{"id":"@secretlint/secretlint-rule-preset-recommend"},{"id":"@secretlint/secretlint-rule-pattern"}]}
+    """
+
     /// Load config on every call so file changes are picked up without restart
+    /// Priority: fixed > config.json > .secretlintrc.json (legacy) > default
     private var configJSON: String {
         if let fixed = fixedConfigJSON { return fixed }
-        if let data = FileManager.default.contents(atPath: Self.userConfigPath),
+        // config.json (preferred)
+        if FileManager.default.fileExists(atPath: AppConfig.configPath) {
+            return AppConfig.load().secretlintrcJSON()
+        }
+        // .secretlintrc.json (legacy fallback)
+        if let data = FileManager.default.contents(atPath: Self.legacyConfigPath),
            let json = String(data: data, encoding: .utf8) {
             return json
         }

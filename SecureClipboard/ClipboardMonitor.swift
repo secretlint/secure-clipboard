@@ -49,10 +49,22 @@ final class ClipboardMonitor {
                 let current = pasteboard.changeCount
                 if current != self.lastChangeCount, self.ownChangeCount != current {
                     self.lastChangeCount = current
+
+                    // Capture source app at the moment of clipboard change
+                    let sourceApp = NSWorkspace.shared.frontmostApplication?.localizedName
+                    let sourceBundleId = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+
+                    // Check if source app should be ignored
+                    let config = AppConfig.load()
+                    if config.shouldIgnoreApp(bundleId: sourceBundleId) {
+                        Thread.sleep(forTimeInterval: 0.5)
+                        continue
+                    }
+
                     if let text = pasteboard.string(forType: .string), !text.isEmpty {
                         let semaphore = DispatchSemaphore(value: 0)
                         Task {
-                            await self.scanText(text)
+                            await self.processText(text, sourceApp: sourceApp, config: config)
                             semaphore.signal()
                         }
                         semaphore.wait()
@@ -60,7 +72,7 @@ final class ClipboardMonitor {
                               let image = NSImage(data: imageData) {
                         let semaphore = DispatchSemaphore(value: 0)
                         Task {
-                            await self.scanImage(image)
+                            await self.scanImage(image, sourceApp: sourceApp)
                             semaphore.signal()
                         }
                         semaphore.wait()
@@ -75,7 +87,30 @@ final class ClipboardMonitor {
         isRunning = false
     }
 
-    private func scanText(_ text: String) async {
+    private func processText(_ text: String, sourceApp: String?, config: AppConfig) async {
+        // Check reject patterns first (entire content is rejected)
+        if let matched = config.matchesRejectPattern(text) {
+            logger.info("Reject pattern matched: \(matched.name)")
+            let newChangeCount = rewriter.rewriteText("[REJECTED: \(matched.name)]")
+            recordOwnChange(changeCount: newChangeCount)
+            lastChangeCount = newChangeCount
+            state.recordDetection(
+                summary: String(localized: "detection.rejected \(matched.name)", bundle: .module),
+                sourceApp: sourceApp,
+                originalText: text
+            )
+            sendNotification(
+                title: "SecureClipboard",
+                body: String(localized: "notification.rejected \(matched.name)", bundle: .module)
+            )
+            return
+        }
+
+        // Then check secretlint rules (mask matched portions)
+        await scanText(text, sourceApp: sourceApp)
+    }
+
+    private func scanText(_ text: String, sourceApp: String?) async {
         do {
             let result = try await scanner.scan(text: text)
             if result.hasSecrets {
@@ -85,6 +120,7 @@ final class ClipboardMonitor {
                 lastChangeCount = newChangeCount
                 state.recordDetection(
                     summary: String(localized: "detection.text_masked", bundle: .module),
+                    sourceApp: sourceApp,
                     originalText: result.originalText
                 )
                 sendNotification(title: "SecureClipboard", body: String(localized: "notification.text_masked", bundle: .module))
@@ -94,7 +130,7 @@ final class ClipboardMonitor {
         }
     }
 
-    private func scanImage(_ image: NSImage) async {
+    private func scanImage(_ image: NSImage, sourceApp: String?) async {
         do {
             let result = try await imageDetector.detect(image: image)
             if result.hasSecrets {
@@ -104,6 +140,7 @@ final class ClipboardMonitor {
                 lastChangeCount = newChangeCount
                 state.recordDetection(
                     summary: String(localized: "detection.image_detected", bundle: .module),
+                    sourceApp: sourceApp,
                     originalImage: image
                 )
                 sendNotification(title: "SecureClipboard", body: String(localized: "notification.image_detected", bundle: .module))
@@ -114,8 +151,6 @@ final class ClipboardMonitor {
     }
 
     private func sendNotification(title: String, body: String) {
-        // NSUserNotificationCenter is deprecated but works without a Bundle Identifier,
-        // unlike UNUserNotificationCenter which crashes in SPM command-line builds.
         let notification = NSUserNotification()
         notification.title = title
         notification.informativeText = body
