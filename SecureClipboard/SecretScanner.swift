@@ -56,14 +56,18 @@ actor SecretScanner {
         // Run secretlint with --format=mask-result
         let currentConfigJSON = fixedConfigJSON ?? currentConfig.secretlintrcJSON()
         let rawOutput = try await runSecretlint(input: text, format: "mask-result", configJSON: currentConfigJSON)
-        let maskedText: String
-        if !text.hasSuffix("\n") && rawOutput.hasSuffix("\n") {
-            maskedText = String(rawOutput.dropLast())
-        } else {
-            maskedText = rawOutput
-        }
+        // Normalize trailing whitespace for comparison — secretlint may strip trailing newlines
+        let normalizedOutput = rawOutput.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedInput = text.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        if maskedText != text {
+        if normalizedOutput != normalizedInput {
+            // Real masking happened — reconstruct with original trailing whitespace
+            let maskedText: String
+            if !text.hasSuffix("\n") && rawOutput.hasSuffix("\n") {
+                maskedText = String(rawOutput.dropLast())
+            } else {
+                maskedText = rawOutput
+            }
             return ScanResult(action: .mask(maskedText: maskedText), originalText: text)
         }
         return ScanResult(action: .none, originalText: text)
