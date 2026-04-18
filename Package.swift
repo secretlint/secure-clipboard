@@ -13,6 +13,10 @@ let package = Package(
                 .copy("Resources")
             ]
         ),
+        .executableTarget(
+            name: "SecureClipboardCLI",
+            path: "SecureClipboardCLI"
+        ),
         .testTarget(
             name: "SecureClipboardTests",
             dependencies: ["SecureClipboard"],

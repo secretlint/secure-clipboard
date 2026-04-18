@@ -4,6 +4,7 @@ struct DetectionRecord: Identifiable {
     let id = UUID()
     let timestamp: Date
     let summary: String
+    let sourceApp: String?
     let originalText: String?
     let originalImage: NSImage?
 }
@@ -31,10 +32,11 @@ final class StatusState {
         return isAlerted ? .red : .primary
     }
 
-    func recordDetection(summary: String, originalText: String? = nil, originalImage: NSImage? = nil) {
+    func recordDetection(summary: String, sourceApp: String? = nil, originalText: String? = nil, originalImage: NSImage? = nil) {
         let record = DetectionRecord(
             timestamp: Date(),
             summary: summary,
+            sourceApp: sourceApp,
             originalText: originalText,
             originalImage: originalImage
         )

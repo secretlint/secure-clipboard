@@ -5,24 +5,22 @@ struct MenuBarView: View {
     let onQuit: () -> Void
 
     private let repoURL = URL(string: "https://github.com/secretlint/secure-clipboard")!
-    private let configPath = NSHomeDirectory() + "/.config/secure-clipboard/.secretlintrc.json"
     private let defaultConfig = """
     {
         "rules": [
             {
                 "id": "@secretlint/secretlint-rule-preset-recommend"
-            },
-            {
-                "id": "@secretlint/secretlint-rule-pattern"
             }
-        ]
+        ],
+        "patterns": [],
+        "skipScanAppIdentifiers": []
     }
     """
 
     var body: some View {
         Toggle(String(localized: "menu.enabled", bundle: .module), isOn: $state.isEnabled)
         Toggle(String(localized: "menu.auto_update", bundle: .module), isOn: $state.autoUpdate)
-        Button(String(localized: "menu.open_secretlintrc", bundle: .module)) {
+        Button(String(localized: "menu.open_config", bundle: .module)) {
             openConfig()
         }
         Button(String(localized: "menu.install_cli", bundle: .module)) {
@@ -45,7 +43,8 @@ struct MenuBarView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             ForEach(state.recentDetections.prefix(5)) { record in
-                Text("\(record.timestamp.formatted(.dateTime.hour().minute())) — \(record.summary)")
+                let appLabel = record.sourceApp.map { " (\($0))" } ?? ""
+                Text("\(record.timestamp.formatted(.dateTime.hour().minute())) — \(record.summary)\(appLabel)")
                     .font(.caption)
             }
         }
@@ -78,7 +77,6 @@ struct MenuBarView: View {
         let macosDir = "\(appPath)/Contents/MacOS"
         let tools = ["secure-pbpaste", "secure-pbcopy"]
 
-        // Create symlinks via AppleScript to get admin privileges
         let commands = tools.map { tool in
             "ln -sf '\(macosDir)/\(tool)' '\(binDir)/\(tool)'"
         }.joined(separator: " && ")
@@ -102,9 +100,9 @@ struct MenuBarView: View {
     }
 
     private func openConfig() {
+        let configPath = AppConfig.configPath
         let url = URL(fileURLWithPath: configPath)
         let dir = url.deletingLastPathComponent()
-        // Create directory and default config if not exists
         if !FileManager.default.fileExists(atPath: configPath) {
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             try? defaultConfig.write(to: url, atomically: true, encoding: .utf8)

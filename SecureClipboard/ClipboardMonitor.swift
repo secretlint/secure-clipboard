@@ -49,10 +49,22 @@ final class ClipboardMonitor {
                 let current = pasteboard.changeCount
                 if current != self.lastChangeCount, self.ownChangeCount != current {
                     self.lastChangeCount = current
+
+                    // Capture source app at the moment of clipboard change
+                    let sourceApp = NSWorkspace.shared.frontmostApplication?.localizedName
+                    let sourceBundleId = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+
+                    // Check if source app should be ignored
+                    let config = AppConfig.load()
+                    if config.shouldSkipScan(bundleId: sourceBundleId) {
+                        Thread.sleep(forTimeInterval: 0.5)
+                        continue
+                    }
+
                     if let text = pasteboard.string(forType: .string), !text.isEmpty {
                         let semaphore = DispatchSemaphore(value: 0)
                         Task {
-                            await self.scanText(text)
+                            await self.scanText(text, sourceApp: sourceApp)
                             semaphore.signal()
                         }
                         semaphore.wait()
@@ -60,7 +72,7 @@ final class ClipboardMonitor {
                               let image = NSImage(data: imageData) {
                         let semaphore = DispatchSemaphore(value: 0)
                         Task {
-                            await self.scanImage(image)
+                            await self.scanImage(image, sourceApp: sourceApp)
                             semaphore.signal()
                         }
                         semaphore.wait()
@@ -75,38 +87,69 @@ final class ClipboardMonitor {
         isRunning = false
     }
 
-    private func scanText(_ text: String) async {
+    private func scanText(_ text: String, sourceApp: String?) async {
         do {
             let result = try await scanner.scan(text: text)
-            if result.hasSecrets {
+            switch result.action {
+            case .discard(let patternName):
+                logger.info("Discard pattern matched: \(patternName)")
+                let newChangeCount = rewriter.rewriteText("[DISCARDED: \(patternName)]")
+                recordOwnChange(changeCount: newChangeCount)
+                lastChangeCount = newChangeCount
+                state.recordDetection(
+                    summary: String(localized: "detection.discarded \(patternName)", bundle: .module),
+                    sourceApp: sourceApp,
+                    originalText: result.originalText
+                )
+                sendNotification(title: "SecureClipboard", body: String(localized: "notification.discarded \(patternName)", bundle: .module))
+            case .mask(let maskedText):
                 logger.info("Secret detected in clipboard text")
-                let newChangeCount = rewriter.rewriteText(result.maskedText)
+                let newChangeCount = rewriter.rewriteText(maskedText)
                 recordOwnChange(changeCount: newChangeCount)
                 lastChangeCount = newChangeCount
                 state.recordDetection(
                     summary: String(localized: "detection.text_masked", bundle: .module),
+                    sourceApp: sourceApp,
                     originalText: result.originalText
                 )
                 sendNotification(title: "SecureClipboard", body: String(localized: "notification.text_masked", bundle: .module))
+            case .none:
+                break
             }
         } catch {
             logger.error("Secret scan failed: \(error)")
         }
     }
 
-    private func scanImage(_ image: NSImage) async {
+    private func scanImage(_ image: NSImage, sourceApp: String?) async {
         do {
             let result = try await imageDetector.detect(image: image)
-            if result.hasSecrets {
+            guard result.hasSecrets else { return }
+
+            switch result.scanAction {
+            case .discard(let patternName):
+                logger.info("Discard pattern matched in image: \(patternName)")
+                let newChangeCount = rewriter.rewriteImageWithWarning(originalSize: image.size)
+                recordOwnChange(changeCount: newChangeCount)
+                lastChangeCount = newChangeCount
+                state.recordDetection(
+                    summary: String(localized: "detection.discarded \(patternName)", bundle: .module),
+                    sourceApp: sourceApp
+                )
+                sendNotification(title: "SecureClipboard", body: String(localized: "notification.discarded \(patternName)", bundle: .module))
+            case .mask:
                 logger.info("Secret detected in clipboard image via OCR")
                 let newChangeCount = rewriter.rewriteImageWithRedaction(original: image, secretBounds: result.secretBounds)
                 recordOwnChange(changeCount: newChangeCount)
                 lastChangeCount = newChangeCount
                 state.recordDetection(
                     summary: String(localized: "detection.image_detected", bundle: .module),
+                    sourceApp: sourceApp,
                     originalImage: image
                 )
                 sendNotification(title: "SecureClipboard", body: String(localized: "notification.image_detected", bundle: .module))
+            case .none:
+                break
             }
         } catch {
             logger.error("Image secret detection failed: \(error)")
@@ -114,8 +157,6 @@ final class ClipboardMonitor {
     }
 
     private func sendNotification(title: String, body: String) {
-        // NSUserNotificationCenter is deprecated but works without a Bundle Identifier,
-        // unlike UNUserNotificationCenter which crashes in SPM command-line builds.
         let notification = NSUserNotification()
         notification.title = title
         notification.informativeText = body

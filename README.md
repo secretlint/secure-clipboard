@@ -57,37 +57,37 @@ Supported secret types: AWS, GitHub, Slack, GCP, Azure, npm, Docker, and [more](
 
 ## Configuration
 
-SecureClipboard uses secretlint for scanning. You can customize rules via the menu: "Open .secretlintrc.json".
-
-Config file location: `~/.config/secure-clipboard/.secretlintrc.json`
-
-The bundled secretlint binary includes two rules:
-
-- [`@secretlint/secretlint-rule-preset-recommend`](https://github.com/secretlint/secretlint/tree/master/packages/%40secretlint/secretlint-rule-preset-recommend) — detects AWS, GitHub, Slack, GCP, Azure, npm, Docker, and other common secrets
-- [`@secretlint/secretlint-rule-pattern`](https://github.com/secretlint/secretlint/tree/master/packages/%40secretlint/secretlint-rule-pattern) — detects custom patterns defined by regex
-
-You can add custom patterns to detect arbitrary text:
+Config file: `~/.config/secure-clipboard/config.json` (open via menu: "Open config.json")
 
 ```json
 {
     "rules": [
-        {
-            "id": "@secretlint/secretlint-rule-preset-recommend"
-        },
-        {
-            "id": "@secretlint/secretlint-rule-pattern",
-            "options": {
-                "patterns": [
-                    {
-                        "name": "credentials",
-                        "pattern": "/MY_SECRET_VALUE/"
-                    }
-                ]
-            }
-        }
-    ]
+        { "id": "@secretlint/secretlint-rule-preset-recommend" }
+    ],
+    "patterns": [
+        { "name": "mask-example", "pattern": "/INTERNAL_\\w+/i", "action": "mask" },
+        { "name": "discard-example", "pattern": "/CONFIDENTIAL/i", "action": "discard" }
+    ],
+    "skipScanAppIdentifiers": ["com.1password.1password"]
 }
 ```
+
+### rules
+
+secretlint rules for detecting known secrets. `@secretlint/secretlint-rule-preset-recommend` detects AWS, GitHub, Slack, GCP, Azure, npm, Docker, and [more](https://github.com/secretlint/secretlint/tree/master/packages/%40secretlint/secretlint-rule-preset-recommend#rules). Removing this rule disables all built-in secret detection.
+
+### patterns
+
+Custom patterns with two actions:
+
+- `"action": "mask"` — matched text is replaced with `***` (uses secretlint's [rule-pattern](https://github.com/secretlint/secretlint/tree/master/packages/%40secretlint/secretlint-rule-pattern) internally)
+- `"action": "discard"` — entire clipboard content is discarded when pattern matches
+
+Patterns use `/regex/flags` syntax. Supported flags: `i` (case-insensitive), `m` (multiline), `s` (dotAll).
+
+### skipScanAppIdentifiers
+
+Bundle identifiers of apps to skip scanning for. Clipboard changes from these apps are not scanned. Useful for password managers like 1Password.
 
 Config changes are picked up on the next clipboard copy — no restart required.
 

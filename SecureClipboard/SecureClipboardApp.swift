@@ -4,14 +4,22 @@ final class AppState {
     static let shared = AppState()
     let statusState = StatusState()
     var monitor: ClipboardMonitor?
+    var ipcServer: IPCServer?
 
     private init() {
-        let m = ClipboardMonitor(state: statusState)
+        let scanner = SecretScanner()
+        let rewriter = ClipboardRewriter()
+        let m = ClipboardMonitor(scanner: scanner, rewriter: rewriter, state: statusState)
         statusState.onCopy = { changeCount in
             m.recordOwnChange(changeCount: changeCount)
         }
         monitor = m
         m.start()
+
+        // Start IPC server for CLI tools
+        let ipc = IPCServer(scanner: scanner, rewriter: rewriter, state: statusState)
+        ipc.start()
+        ipcServer = ipc
 
         // Check for secretlint updates on launch
         let state = statusState

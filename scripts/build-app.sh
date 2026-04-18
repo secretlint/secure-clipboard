@@ -24,9 +24,10 @@ cp -R ".build/release/${APP_NAME}_${APP_NAME}.bundle" "${APP_DIR}/"
 # Also copy next to binary as fallback
 cp -R ".build/release/${APP_NAME}_${APP_NAME}.bundle" "${MACOS}/"
 
-# Copy CLI tools
-cp SecureClipboard/cli/secure-pbpaste "${MACOS}/"
-cp SecureClipboard/cli/secure-pbcopy "${MACOS}/"
+# Copy CLI binary and create symlinks for secure-pbpaste/secure-pbcopy
+cp ".build/release/SecureClipboardCLI" "${MACOS}/SecureClipboardCLI"
+ln -sf SecureClipboardCLI "${MACOS}/secure-pbpaste"
+ln -sf SecureClipboardCLI "${MACOS}/secure-pbcopy"
 
 # Create Info.plist
 cat > "${CONTENTS}/Info.plist" << PLIST

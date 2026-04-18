@@ -4,6 +4,7 @@ import Vision
 struct ImageDetectionResult {
     let hasSecrets: Bool
     let extractedText: String
+    let scanAction: ScanAction
     /// Bounding boxes of lines containing secrets (in image coordinates, origin bottom-left)
     let secretBounds: [CGRect]
 }
@@ -57,14 +58,14 @@ actor ImageSecretDetector {
     func detect(image: NSImage) async throws -> ImageDetectionResult {
         let observations = try await extractObservations(from: image)
         if observations.isEmpty {
-            return ImageDetectionResult(hasSecrets: false, extractedText: "", secretBounds: [])
+            return ImageDetectionResult(hasSecrets: false, extractedText: "", scanAction: .none, secretBounds: [])
         }
 
         let fullText = observations.map(\.text).joined(separator: "\n")
         let scanResult = try await scanner.scan(text: fullText)
 
         guard scanResult.hasSecrets else {
-            return ImageDetectionResult(hasSecrets: false, extractedText: fullText, secretBounds: [])
+            return ImageDetectionResult(hasSecrets: false, extractedText: fullText, scanAction: .none, secretBounds: [])
         }
 
         // Find which lines contain masked content by comparing original vs masked line by line
@@ -91,6 +92,7 @@ actor ImageSecretDetector {
         return ImageDetectionResult(
             hasSecrets: true,
             extractedText: fullText,
+            scanAction: scanResult.action,
             secretBounds: secretBounds
         )
     }

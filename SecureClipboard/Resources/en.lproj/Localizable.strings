@@ -4,17 +4,19 @@
 "menu.copy_original" = "Copy Original Text";
 "menu.no_detections" = "No detections";
 "menu.recent" = "Recent:";
-"menu.open_secretlintrc" = "Open .secretlintrc.json";
+"menu.open_config" = "Open config.json";
 "menu.install_cli" = "Install CLI Tools";
 "menu.quit" = "Quit";
 
 /* Notifications */
 "notification.text_masked" = "Masked secrets in clipboard text";
 "notification.image_detected" = "Secrets detected in clipboard image";
+"notification.discarded %@" = "Clipboard discarded: %@";
 
 /* Detection summaries */
 "detection.text_masked" = "Masked secrets in text";
 "detection.image_detected" = "Detected secrets in image";
+"detection.discarded %@" = "Discarded: %@";
 
 /* Update */
 "update.up_to_date" = "Up to date (v%@)";
