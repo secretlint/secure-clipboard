@@ -9,6 +9,9 @@ let package = Package(
         .executableTarget(
             name: "SecureClipboard",
             path: "SecureClipboard",
+            exclude: [
+                "cli"
+            ],
             resources: [
                 .copy("Resources")
             ]
