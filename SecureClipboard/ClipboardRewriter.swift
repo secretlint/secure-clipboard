@@ -40,8 +40,8 @@ struct ClipboardRewriter {
 
         let ciImage = CIImage(cgImage: cgImage)
         let context = CIContext()
-        let blurRadius = max(image.size.width, image.size.height) * 0.03
-        let padding = blurRadius
+        let blurRadius: CGFloat = 10
+        let padding: CGFloat = 2
 
         // Create a fully blurred version of the image
         guard let blurFilter = CIFilter(name: "CIGaussianBlur") else {
