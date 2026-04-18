@@ -76,8 +76,8 @@ struct AppConfig: Codable {
     func matchesDiscardPattern(_ text: String) -> Pattern? {
         guard let patterns else { return nil }
         for pattern in patterns where pattern.action == .discard {
-            let regexString = extractRegex(from: pattern.pattern)
-            if let regex = try? NSRegularExpression(pattern: regexString),
+            let (regexString, options) = parseRegex(pattern.pattern)
+            if let regex = try? NSRegularExpression(pattern: regexString, options: options),
                regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil {
                 return pattern
             }
@@ -90,14 +90,25 @@ struct AppConfig: Codable {
         return ids.contains(bundleId)
     }
 
-    private func extractRegex(from pattern: String) -> String {
-        if pattern.hasPrefix("/") {
-            let trimmed = String(pattern.dropFirst())
-            if let lastSlash = trimmed.lastIndex(of: "/") {
-                return String(trimmed[trimmed.startIndex..<lastSlash])
+    /// Parse /pattern/flags format into regex string and NSRegularExpression options
+    private func parseRegex(_ pattern: String) -> (String, NSRegularExpression.Options) {
+        guard pattern.hasPrefix("/") else { return (pattern, []) }
+        let trimmed = String(pattern.dropFirst())
+        guard let lastSlash = trimmed.lastIndex(of: "/") else { return (pattern, []) }
+
+        let regexString = String(trimmed[trimmed.startIndex..<lastSlash])
+        let flags = String(trimmed[trimmed.index(after: lastSlash)...])
+
+        var options: NSRegularExpression.Options = []
+        for flag in flags {
+            switch flag {
+            case "i": options.insert(.caseInsensitive)
+            case "m": options.insert(.anchorsMatchLines)
+            case "s": options.insert(.dotMatchesLineSeparators)
+            default: break
             }
         }
-        return pattern
+        return (regexString, options)
     }
 }
 
