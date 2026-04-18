@@ -67,8 +67,8 @@ final class StatusState {
         let copyChangeCount = pasteboard.changeCount
         onCopy?(copyChangeCount)
 
-        // Auto-clear clipboard after 30 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self] in
+        // Auto-clear clipboard after 90 seconds (same as 1Password default)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 90) { [weak self] in
             // Only clear if clipboard hasn't been changed since our copy
             if pasteboard.changeCount == copyChangeCount {
                 pasteboard.clearContents()
