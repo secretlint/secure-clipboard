@@ -95,6 +95,8 @@ Config changes are picked up on the next clipboard copy — no restart required.
 
 SecureClipboard bundles `secure-pbpaste` and `secure-pbcopy` — drop-in replacements for `pbpaste` and `pbcopy` that automatically mask secrets.
 
+Unlike regular `pbcopy`, raw text never touches the clipboard. `secure-pbcopy` sends text to the running app via IPC (Unix Domain Socket), the app scans and masks it, and only the masked text is written to the clipboard. If the app is not running, it is automatically launched in the background.
+
 Install via menu bar: click the SecureClipboard icon → "Install CLI Tools". This creates symlinks in `/usr/local/bin/` (requires admin password).
 
 Or manually:
@@ -134,10 +136,12 @@ bash scripts/build-app.sh
 ```
 SecureClipboard/
 ├── SecureClipboardApp.swift     # App entry, menu bar setup
+├── AppConfig.swift              # Config loading (config.json)
 ├── ClipboardMonitor.swift       # NSPasteboard polling, change detection
 ├── SecretScanner.swift          # secretlint binary subprocess
 ├── ClipboardRewriter.swift      # Clipboard overwrite (text + image)
 ├── ImageSecretDetector.swift    # Vision OCR + secret scan
+├── IPCServer.swift              # Unix Domain Socket server for CLI tools
 ├── StatusState.swift            # Observable app state
 ├── MenuBarView.swift            # Menu bar UI
 ├── SecretlintUpdater.swift      # Auto-update from GitHub releases
@@ -145,6 +149,8 @@ SecureClipboard/
     ├── secretlintrc.json        # Default secretlint config
     ├── en.lproj/                # English strings
     └── ja.lproj/                # Japanese strings
+SecureClipboardCLI/
+└── SecurePBMain.swift           # secure-pbpaste/secure-pbcopy binary
 ```
 
 ## License
