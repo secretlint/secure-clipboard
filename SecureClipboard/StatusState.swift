@@ -66,6 +66,8 @@ final class StatusState {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+        // Mark as concealed so clipboard managers (Alfred, etc.) don't record it
+        pasteboard.setData(Data(), forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
         let copyChangeCount = pasteboard.changeCount
         onCopy?(copyChangeCount)
 
