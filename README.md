@@ -39,7 +39,7 @@ After copying, your clipboard will contain:
 
 If you need the raw (unmasked) text, click the menu bar icon and select "Copy Original Text". This is available for 30 seconds after detection.
 
-Supported secret types: AWS, GitHub, Slack, GCP, Azure, npm, Docker, and [many more](https://github.com/secretlint/secretlint#rules).
+Supported secret types: AWS, GitHub, Slack, GCP, Azure, npm, Docker, and [more](https://github.com/secretlint/secretlint/tree/master/packages/%40secretlint/secretlint-rule-preset-recommend#rules). You can also define custom patterns.
 
 ## Configuration
 
@@ -47,9 +47,12 @@ SecureClipboard uses secretlint for scanning. You can customize rules via the me
 
 Config file location: `~/.config/secure-clipboard/.secretlintrc.json`
 
-Default config includes `@secretlint/secretlint-rule-preset-recommend` and `@secretlint/secretlint-rule-pattern`.
+The bundled secretlint binary includes two rules:
 
-You can add custom patterns to detect arbitrary text using `@secretlint/secretlint-rule-pattern`:
+- [`@secretlint/secretlint-rule-preset-recommend`](https://github.com/secretlint/secretlint/tree/master/packages/%40secretlint/secretlint-rule-preset-recommend) — detects AWS, GitHub, Slack, GCP, Azure, npm, Docker, and other common secrets
+- [`@secretlint/secretlint-rule-pattern`](https://github.com/secretlint/secretlint/tree/master/packages/%40secretlint/secretlint-rule-pattern) — detects custom patterns defined by regex
+
+You can add custom patterns to detect arbitrary text:
 
 ```json
 {
@@ -72,7 +75,7 @@ You can add custom patterns to detect arbitrary text using `@secretlint/secretli
 }
 ```
 
-Config changes are picked up on the next clipboard copy — no restart required. See [secretlint rules](https://github.com/secretlint/secretlint#rules) for all available rules.
+Config changes are picked up on the next clipboard copy — no restart required.
 
 ## Development
 
