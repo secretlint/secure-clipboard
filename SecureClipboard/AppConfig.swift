@@ -4,7 +4,7 @@ import os
 /// SecureClipboard configuration loaded from ~/.config/secure-clipboard/config.json
 struct AppConfig: Codable {
     var rules: [SecretlintRule]
-    var rejectPatterns: [RejectPattern]?
+    var patterns: [Pattern]?
     var skipScanAppIdentifiers: [String]?
 
     struct SecretlintRule: Codable {
@@ -12,19 +12,24 @@ struct AppConfig: Codable {
         let options: AnyCodable?
     }
 
-    struct RejectPattern: Codable {
+    enum PatternAction: String, Codable {
+        case mask
+        case discard
+    }
+
+    struct Pattern: Codable {
         let name: String
         let pattern: String
+        let action: PatternAction
     }
 
     static let configPath = NSHomeDirectory() + "/.config/secure-clipboard/config.json"
 
     static let `default` = AppConfig(
         rules: [
-            SecretlintRule(id: "@secretlint/secretlint-rule-preset-recommend", options: nil),
-            SecretlintRule(id: "@secretlint/secretlint-rule-pattern", options: nil)
+            SecretlintRule(id: "@secretlint/secretlint-rule-preset-recommend", options: nil)
         ],
-        rejectPatterns: nil,
+        patterns: nil,
         skipScanAppIdentifiers: nil
     )
 
@@ -37,16 +42,29 @@ struct AppConfig: Codable {
         return config
     }
 
-    /// Convert rules to JSON string for secretlint --secretlintrcJSON
+    /// Convert rules + mask patterns to JSON string for secretlint --secretlintrcJSON
     func secretlintrcJSON() -> String {
-        let rulesJSON: [[String: Any]] = rules.map { rule in
+        var allRules: [[String: Any]] = rules.map { rule in
             var dict: [String: Any] = ["id": rule.id]
             if let options = rule.options {
                 dict["options"] = options.value
             }
             return dict
         }
-        let config: [String: Any] = ["rules": rulesJSON]
+
+        // Add mask patterns as @secretlint/secretlint-rule-pattern options
+        let maskPatterns = (patterns ?? []).filter { $0.action == .mask }
+        if !maskPatterns.isEmpty {
+            let patternOptions: [[String: Any]] = maskPatterns.map { p in
+                ["name": p.name, "pattern": p.pattern]
+            }
+            allRules.append([
+                "id": "@secretlint/secretlint-rule-pattern",
+                "options": ["patterns": patternOptions]
+            ])
+        }
+
+        let config: [String: Any] = ["rules": allRules]
         guard let data = try? JSONSerialization.data(withJSONObject: config),
               let json = String(data: data, encoding: .utf8) else {
             return AppConfig.default.secretlintrcJSON()
@@ -54,11 +72,10 @@ struct AppConfig: Codable {
         return json
     }
 
-    /// Check if text matches any reject pattern
-    func matchesRejectPattern(_ text: String) -> RejectPattern? {
-        guard let patterns = rejectPatterns else { return nil }
-        for pattern in patterns {
-            // Extract regex from /pattern/ or /pattern/flags format
+    /// Check if text matches any discard pattern
+    func matchesDiscardPattern(_ text: String) -> Pattern? {
+        guard let patterns else { return nil }
+        for pattern in patterns where pattern.action == .discard {
             let regexString = extractRegex(from: pattern.pattern)
             if let regex = try? NSRegularExpression(pattern: regexString),
                regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil {
@@ -68,14 +85,12 @@ struct AppConfig: Codable {
         return nil
     }
 
-    /// Check if a bundle identifier should be ignored
     func shouldSkipScan(bundleId: String?) -> Bool {
         guard let bundleId, let ids = skipScanAppIdentifiers else { return false }
         return ids.contains(bundleId)
     }
 
     private func extractRegex(from pattern: String) -> String {
-        // Handle /pattern/ and /pattern/flags format
         if pattern.hasPrefix("/") {
             let trimmed = String(pattern.dropFirst())
             if let lastSlash = trimmed.lastIndex(of: "/") {

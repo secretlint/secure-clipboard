@@ -88,25 +88,25 @@ final class ClipboardMonitor {
     }
 
     private func processText(_ text: String, sourceApp: String?, config: AppConfig) async {
-        // Check reject patterns first (entire content is rejected)
-        if let matched = config.matchesRejectPattern(text) {
-            logger.info("Reject pattern matched: \(matched.name)")
-            let newChangeCount = rewriter.rewriteText("[REJECTED: \(matched.name)]")
+        // Check discard patterns first (entire content is discarded)
+        if let matched = config.matchesDiscardPattern(text) {
+            logger.info("Discard pattern matched: \(matched.name)")
+            let newChangeCount = rewriter.rewriteText("[DISCARDED: \(matched.name)]")
             recordOwnChange(changeCount: newChangeCount)
             lastChangeCount = newChangeCount
             state.recordDetection(
-                summary: String(localized: "detection.rejected \(matched.name)", bundle: .module),
+                summary: String(localized: "detection.discarded \(matched.name)", bundle: .module),
                 sourceApp: sourceApp,
                 originalText: text
             )
             sendNotification(
                 title: "SecureClipboard",
-                body: String(localized: "notification.rejected \(matched.name)", bundle: .module)
+                body: String(localized: "notification.discarded \(matched.name)", bundle: .module)
             )
             return
         }
 
-        // Then check secretlint rules (mask matched portions)
+        // Then check secretlint rules + mask patterns
         await scanText(text, sourceApp: sourceApp)
     }
 

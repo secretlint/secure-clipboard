@@ -11,12 +11,12 @@
 /* Notifications */
 "notification.text_masked" = "Masked secrets in clipboard text";
 "notification.image_detected" = "Secrets detected in clipboard image";
-"notification.rejected %@" = "Clipboard rejected: %@";
+"notification.discarded %@" = "Clipboard discarded: %@";
 
 /* Detection summaries */
 "detection.text_masked" = "Masked secrets in text";
 "detection.image_detected" = "Detected secrets in image";
-"detection.rejected %@" = "Rejected: %@";
+"detection.discarded %@" = "Discarded: %@";
 
 /* Update */
 "update.up_to_date" = "Up to date (v%@)";
