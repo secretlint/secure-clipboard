@@ -30,7 +30,7 @@ rm -f /usr/local/bin/secure-pbpaste /usr/local/bin/secure-pbcopy
 - Text: scans with secretlint, replaces secrets with `***`
 - Image: OCR via Vision framework, scans extracted text, redacts secret regions with natural-looking crystallize + blur effect
 - Menu bar icon turns red on detection with macOS notification
-- "Copy Original Text" menu item to retrieve unmasked content (auto-cleared after 90 seconds)
+- "Copy Original Text" menu item to retrieve unmasked content (auto-cleared after 90 seconds, same as [1Password](https://support.1password.com/copy-passwords/))
 - CLI tools: `secure-pbpaste` and `secure-pbcopy` bundled in the app
 - Auto-updates secretlint binary from GitHub releases
 - Localized (English / Japanese)
