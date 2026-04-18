@@ -47,33 +47,14 @@ actor SecretScanner {
 
     func scan(text: String) async throws -> ScanResult {
         let currentConfig = AppConfig.load()
-        let currentConfigJSON = fixedConfigJSON ?? currentConfig.secretlintrcJSON()
 
-        // Check if discard patterns exist
-        let discardPatternNames = Set(
-            (currentConfig.patterns ?? [])
-                .filter { $0.action == .discard }
-                .map(\.name)
-        )
-        let hasDiscardPatterns = !discardPatternNames.isEmpty && fixedConfigJSON == nil
-
-        // Only run JSON step when discard patterns are configured
-        if hasDiscardPatterns {
-            let jsonOutput = try await runSecretlint(input: text, format: "json", configJSON: currentConfigJSON)
-            let matchedNames = parseMatchedNames(jsonOutput)
-
-            if matchedNames.isEmpty {
-                return ScanResult(action: .none, originalText: text)
-            }
-
-            for name in matchedNames {
-                if discardPatternNames.contains(name) {
-                    return ScanResult(action: .discard(patternName: name), originalText: text)
-                }
-            }
+        // Check discard patterns first (Swift-side regex, no secretlint call needed)
+        if fixedConfigJSON == nil, let matched = currentConfig.matchesDiscardPattern(text) {
+            return ScanResult(action: .discard(patternName: matched.name), originalText: text)
         }
 
-        // Mask — run secretlint with --format=mask-result
+        // Run secretlint with --format=mask-result
+        let currentConfigJSON = fixedConfigJSON ?? currentConfig.secretlintrcJSON()
         let rawOutput = try await runSecretlint(input: text, format: "mask-result", configJSON: currentConfigJSON)
         let maskedText: String
         if !text.hasSuffix("\n") && rawOutput.hasSuffix("\n") {
@@ -86,33 +67,6 @@ actor SecretScanner {
             return ScanResult(action: .mask(maskedText: maskedText), originalText: text)
         }
         return ScanResult(action: .none, originalText: text)
-    }
-
-    /// Parse secretlint JSON output to extract matched rule/pattern names
-    private func parseMatchedNames(_ jsonOutput: String) -> [String] {
-        guard let data = jsonOutput.data(using: .utf8),
-              let results = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
-            return []
-        }
-        var names: [String] = []
-        for result in results {
-            guard let messages = result["messages"] as? [[String: Any]] else { continue }
-            for message in messages {
-                // ruleId format: "@secretlint/secretlint-rule-pattern > name" or just "ruleId"
-                if let ruleId = message["ruleId"] as? String {
-                    // Extract pattern name from "parent > name" format
-                    if ruleId.contains(" > ") {
-                        let parts = ruleId.split(separator: ">").map { $0.trimmingCharacters(in: .whitespaces) }
-                        if let name = parts.last {
-                            names.append(name)
-                        }
-                    } else {
-                        names.append(ruleId)
-                    }
-                }
-            }
-        }
-        return names
     }
 
     private func runSecretlint(input: String, format: String, configJSON: String) async throws -> String {

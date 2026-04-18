@@ -28,13 +28,14 @@ import Testing
         ]
     )
     let json = config.secretlintrcJSON()
-    // Both mask and discard patterns should be passed to secretlint
+    // Only mask patterns should be passed to secretlint
     #expect(json.contains("secretlint-rule-pattern"))
     #expect(json.contains("MY_TOKEN"))
-    #expect(json.contains("NG_WORD"))
+    // Discard patterns are handled by Swift, not secretlint
+    #expect(json.contains("NG_WORD") == false)
 }
 
-@Test func secretlintrcJSONIncludesDiscardPatterns() {
+@Test func secretlintrcJSONExcludesDiscardPatterns() {
     let config = AppConfig(
         rules: [
             .init(id: "@secretlint/secretlint-rule-preset-recommend", options: nil)
@@ -44,8 +45,9 @@ import Testing
         ]
     )
     let json = config.secretlintrcJSON()
-    #expect(json.contains("CONFIDENTIAL"))
-    #expect(json.contains("secretlint-rule-pattern"))
+    // Discard-only patterns should not be in secretlintrc
+    #expect(json.contains("CONFIDENTIAL") == false)
+    #expect(json.contains("secretlint-rule-pattern") == false)
 }
 
 @Test func secretlintrcJSONWithNoPatterns() {
@@ -99,4 +101,35 @@ import Testing
     )
     #expect(discardNames == Set(["ng-word", "another-ng"]))
     #expect(discardNames.contains("mask-only") == false)
+}
+
+@Test func matchesDiscardPatternSimple() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(name: "ng", pattern: "/CONFIDENTIAL/", action: .discard)
+        ]
+    )
+    #expect(config.matchesDiscardPattern("this is CONFIDENTIAL info")?.name == "ng")
+    #expect(config.matchesDiscardPattern("this is public info") == nil)
+}
+
+@Test func matchesDiscardPatternCaseInsensitive() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(name: "ng", pattern: "/confidential/i", action: .discard)
+        ]
+    )
+    #expect(config.matchesDiscardPattern("this is CONFIDENTIAL info")?.name == "ng")
+}
+
+@Test func matchesDiscardPatternIgnoresMask() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(name: "mask-only", pattern: "/SECRET/", action: .mask)
+        ]
+    )
+    #expect(config.matchesDiscardPattern("this has SECRET in it") == nil)
 }

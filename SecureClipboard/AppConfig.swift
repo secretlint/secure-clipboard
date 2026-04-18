@@ -55,10 +55,10 @@ struct AppConfig: Codable {
                 return dict
             }
 
-        // Add all patterns (mask + discard) as @secretlint/secretlint-rule-pattern options
-        let allPatterns = patterns ?? []
-        if !allPatterns.isEmpty {
-            let patternOptions: [[String: Any]] = allPatterns.map { p in
+        // Add mask patterns only to secretlint (discard is handled by Swift)
+        let maskPatterns = (patterns ?? []).filter { $0.action == .mask }
+        if !maskPatterns.isEmpty {
+            let patternOptions: [[String: Any]] = maskPatterns.map { p in
                 ["name": p.name, "pattern": p.pattern]
             }
             allRules.append([
@@ -75,9 +75,42 @@ struct AppConfig: Codable {
         return json
     }
 
+    /// Check if text matches any discard pattern (Swift-side regex)
+    func matchesDiscardPattern(_ text: String) -> Pattern? {
+        guard let patterns else { return nil }
+        for pattern in patterns where pattern.action == .discard {
+            let (regexString, options) = parseRegex(pattern.pattern)
+            if let regex = try? NSRegularExpression(pattern: regexString, options: options),
+               regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil {
+                return pattern
+            }
+        }
+        return nil
+    }
+
     func shouldSkipScan(bundleId: String?) -> Bool {
         guard let bundleId, let ids = skipScanAppIdentifiers else { return false }
         return ids.contains(bundleId)
+    }
+
+    private func parseRegex(_ pattern: String) -> (String, NSRegularExpression.Options) {
+        guard pattern.hasPrefix("/") else { return (pattern, []) }
+        let trimmed = String(pattern.dropFirst())
+        guard let lastSlash = trimmed.lastIndex(of: "/") else { return (pattern, []) }
+
+        let regexString = String(trimmed[trimmed.startIndex..<lastSlash])
+        let flags = String(trimmed[trimmed.index(after: lastSlash)...])
+
+        var options: NSRegularExpression.Options = []
+        for flag in flags {
+            switch flag {
+            case "i": options.insert(.caseInsensitive)
+            case "m": options.insert(.anchorsMatchLines)
+            case "s": options.insert(.dotMatchesLineSeparators)
+            default: break
+            }
+        }
+        return (regexString, options)
     }
 
 }
