@@ -66,7 +66,7 @@ Config file: `~/.config/secure-clipboard/config.json` (open via menu: "Open conf
     ],
     "patterns": [
         { "name": "mask-example", "pattern": "/INTERNAL_\\w+/i", "action": "mask" },
-        { "name": "discard-example", "pattern": "/社外秘/", "action": "discard" }
+        { "name": "discard-example", "pattern": "/CONFIDENTIAL/i", "action": "discard" }
     ],
     "skipScanAppIdentifiers": ["com.1password.1password"]
 }
