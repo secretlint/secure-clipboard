@@ -97,11 +97,11 @@ final class ClipboardMonitor {
                 recordOwnChange(changeCount: newChangeCount)
                 lastChangeCount = newChangeCount
                 state.recordDetection(
-                    summary: String(localized: "detection.discarded \(patternName)", bundle: .module),
+                    summary: String(format: NSLocalizedString("detection.discarded", bundle: .module, comment: ""), patternName),
                     sourceApp: sourceApp,
                     originalText: result.originalText
                 )
-                sendNotification(title: "SecureClipboard", body: String(localized: "notification.discarded \(patternName)", bundle: .module))
+                sendNotification(title: "SecureClipboard", body: String(format: NSLocalizedString("notification.discarded", bundle: .module, comment: ""), patternName))
             case .mask(let maskedText):
                 logger.info("Secret detected in clipboard text")
                 let newChangeCount = rewriter.rewriteText(maskedText)
@@ -133,10 +133,10 @@ final class ClipboardMonitor {
                 recordOwnChange(changeCount: newChangeCount)
                 lastChangeCount = newChangeCount
                 state.recordDetection(
-                    summary: String(localized: "detection.discarded \(patternName)", bundle: .module),
+                    summary: String(format: NSLocalizedString("detection.discarded", bundle: .module, comment: ""), patternName),
                     sourceApp: sourceApp
                 )
-                sendNotification(title: "SecureClipboard", body: String(localized: "notification.discarded \(patternName)", bundle: .module))
+                sendNotification(title: "SecureClipboard", body: String(format: NSLocalizedString("notification.discarded", bundle: .module, comment: ""), patternName))
             case .mask:
                 logger.info("Secret detected in clipboard image via OCR")
                 let newChangeCount = rewriter.rewriteImageWithRedaction(original: image, secretBounds: result.secretBounds)

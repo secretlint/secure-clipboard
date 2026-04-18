@@ -35,14 +35,17 @@ final class AppState {
             await MainActor.run {
                 switch result {
                 case .upToDate(let version):
-                    state.updateStatus = String(localized: "update.up_to_date \(version)", bundle: .module)
+                    let fmt = NSLocalizedString("update.up_to_date", bundle: .module, comment: "")
+                    state.updateStatus = String(format: fmt, version)
                 case .updated(let from, let to):
-                    state.updateStatus = String(localized: "update.updated \(from) \(to)", bundle: .module)
+                    let fmt = NSLocalizedString("update.updated", bundle: .module, comment: "")
+                    state.updateStatus = String(format: fmt, from, to)
                     state.secretlintVersion = to
                 case .skipped(let reason):
                     state.updateStatus = reason
                 case .failed(let error):
-                    state.updateStatus = String(localized: "update.failed \(error)", bundle: .module)
+                    let fmt = NSLocalizedString("update.failed", bundle: .module, comment: "")
+                    state.updateStatus = String(format: fmt, error)
                 }
             }
         }

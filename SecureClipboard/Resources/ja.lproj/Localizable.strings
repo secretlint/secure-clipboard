@@ -11,12 +11,12 @@
 /* Notifications */
 "notification.text_masked" = "クリップボードのシークレットをマスクしました";
 "notification.image_detected" = "クリップボードの画像にシークレットが含まれています";
-"notification.discarded %@" = "クリップボードを破棄しました: %@";
+"notification.discarded" = "クリップボードを破棄しました: %@";
 
 /* Detection summaries */
 "detection.text_masked" = "テキスト内のシークレットをマスクしました";
 "detection.image_detected" = "画像内のシークレットを検出しました";
-"detection.discarded %@" = "破棄: %@";
+"detection.discarded" = "破棄: %@";
 
 /* Update */
 "update.up_to_date" = "最新 (v%@)";
