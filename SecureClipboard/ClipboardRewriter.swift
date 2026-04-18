@@ -10,12 +10,51 @@ struct ClipboardRewriter {
     }
 
     @discardableResult
+    func rewriteImageWithRedaction(original: NSImage, secretBounds: [CGRect]) -> Int {
+        let redactedImage: NSImage
+        if secretBounds.isEmpty {
+            redactedImage = createWarningImage(size: original.size)
+        } else {
+            redactedImage = redactRegions(image: original, regions: secretBounds)
+        }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects([redactedImage])
+        return pasteboard.changeCount
+    }
+
+    @discardableResult
     func rewriteImageWithWarning(originalSize: NSSize) -> Int {
         let warningImage = createWarningImage(size: originalSize)
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.writeObjects([warningImage])
         return pasteboard.changeCount
+    }
+
+    /// Draw red rectangles over secret regions on the original image
+    private func redactRegions(image: NSImage, regions: [CGRect]) -> NSImage {
+        let result = NSImage(size: image.size)
+        result.lockFocus()
+
+        // Draw original image
+        image.draw(in: NSRect(origin: .zero, size: image.size))
+
+        // Draw red overlay on each secret region with padding
+        let padding: CGFloat = 4
+        NSColor(red: 0.9, green: 0.2, blue: 0.2, alpha: 1.0).setFill()
+        for region in regions {
+            let paddedRect = NSRect(
+                x: region.origin.x - padding,
+                y: region.origin.y - padding,
+                width: region.size.width + padding * 2,
+                height: region.size.height + padding * 2
+            )
+            NSBezierPath.fill(paddedRect)
+        }
+
+        result.unlockFocus()
+        return result
     }
 
     private func createWarningImage(size: NSSize) -> NSImage {

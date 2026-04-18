@@ -99,7 +99,7 @@ final class ClipboardMonitor {
             let result = try await imageDetector.detect(image: image)
             if result.hasSecrets {
                 logger.info("Secret detected in clipboard image via OCR")
-                let newChangeCount = rewriter.rewriteImageWithWarning(originalSize: image.size)
+                let newChangeCount = rewriter.rewriteImageWithRedaction(original: image, secretBounds: result.secretBounds)
                 recordOwnChange(changeCount: newChangeCount)
                 lastChangeCount = newChangeCount
                 state.recordDetection(
