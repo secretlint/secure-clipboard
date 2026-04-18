@@ -58,13 +58,23 @@ final class StatusState {
         }
     }
 
-    /// Copy original text to clipboard (skips monitor scan)
+    /// Copy original text to clipboard (skips monitor scan), auto-clears after 10 seconds
     func copyOriginalText() {
         guard let text = lastOriginalText else { return }
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
-        onCopy?(pasteboard.changeCount)
+        let copyChangeCount = pasteboard.changeCount
+        onCopy?(copyChangeCount)
+
+        // Auto-clear clipboard after 10 seconds (like 1Password)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+            // Only clear if clipboard hasn't been changed since our copy
+            if pasteboard.changeCount == copyChangeCount {
+                pasteboard.clearContents()
+                self?.onCopy?(pasteboard.changeCount)
+            }
+        }
     }
 
     /// Callback for ClipboardMonitor to record own clipboard changes
