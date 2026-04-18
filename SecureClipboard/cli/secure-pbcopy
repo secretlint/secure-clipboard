@@ -2,11 +2,17 @@
 # secure-pbcopy: pbcopy with secretlint masking
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Resolve symlinks to find the real script location in the .app bundle
+SOURCE="$0"
+while [ -L "$SOURCE" ]; do
+    SOURCE="$(readlink "$SOURCE")"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
+
 # Find secretlint binary in the app bundle
-SECRETLINT="${SCRIPT_DIR}/../Resources/SecureClipboard_SecureClipboard.bundle/Resources/secretlint"
+SECRETLINT="${SCRIPT_DIR}/SecureClipboard_SecureClipboard.bundle/Resources/secretlint"
 if [ ! -x "$SECRETLINT" ]; then
-    SECRETLINT="${SCRIPT_DIR}/SecureClipboard_SecureClipboard.bundle/Resources/secretlint"
+    SECRETLINT="${SCRIPT_DIR}/../Resources/SecureClipboard_SecureClipboard.bundle/Resources/secretlint"
 fi
 if [ ! -x "$SECRETLINT" ]; then
     echo "Error: secretlint binary not found" >&2
