@@ -5,7 +5,7 @@ import os
 struct AppConfig: Codable {
     var rules: [SecretlintRule]
     var rejectPatterns: [RejectPattern]?
-    var ignoredApps: [String]?
+    var skipScanAppIdentifiers: [String]?
 
     struct SecretlintRule: Codable {
         let id: String
@@ -25,7 +25,7 @@ struct AppConfig: Codable {
             SecretlintRule(id: "@secretlint/secretlint-rule-pattern", options: nil)
         ],
         rejectPatterns: nil,
-        ignoredApps: nil
+        skipScanAppIdentifiers: nil
     )
 
     /// Load config from disk, falling back to defaults
@@ -69,9 +69,9 @@ struct AppConfig: Codable {
     }
 
     /// Check if a bundle identifier should be ignored
-    func shouldIgnoreApp(bundleId: String?) -> Bool {
-        guard let bundleId, let ignored = ignoredApps else { return false }
-        return ignored.contains(bundleId)
+    func shouldSkipScan(bundleId: String?) -> Bool {
+        guard let bundleId, let ids = skipScanAppIdentifiers else { return false }
+        return ids.contains(bundleId)
     }
 
     private func extractRegex(from pattern: String) -> String {

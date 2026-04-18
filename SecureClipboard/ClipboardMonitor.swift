@@ -56,7 +56,7 @@ final class ClipboardMonitor {
 
                     // Check if source app should be ignored
                     let config = AppConfig.load()
-                    if config.shouldIgnoreApp(bundleId: sourceBundleId) {
+                    if config.shouldSkipScan(bundleId: sourceBundleId) {
                         Thread.sleep(forTimeInterval: 0.5)
                         continue
                     }

@@ -16,7 +16,7 @@ struct MenuBarView: View {
             }
         ],
         "rejectPatterns": [],
-        "ignoredApps": []
+        "skipScanAppIdentifiers": []
     }
     """
 
