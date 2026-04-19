@@ -35,7 +35,7 @@ rm -f /usr/local/bin/secure-pbpaste /usr/local/bin/secure-pbcopy
 - Text: scans with secretlint, replaces secrets with `***`
 - Image: OCR via Vision framework, scans extracted text, redacts secret regions with natural-looking crystallize + blur effect
 - Menu bar icon turns red on detection with macOS notification
-- "Copy Original Text" menu item to retrieve unmasked content (auto-cleared after 90 seconds, same as [1Password](https://support.1password.com/copy-passwords/)). Marked as [concealed](https://nspasteboard.org/) so clipboard managers (Alfred, etc.) don't record it.
+- "Copy Original Text" / "Copy Original Image" menu items to retrieve unmasked content (auto-cleared after 90 seconds, same as [1Password](https://support.1password.com/copy-passwords/)). Marked as [concealed](https://nspasteboard.org/) so clipboard managers (Alfred, etc.) don't record it.
 - CLI tools: `secure-pbpaste` and `secure-pbcopy` bundled in the app
 - Auto-updates secretlint binary from GitHub releases
 - Localized (English / Japanese)
@@ -73,7 +73,8 @@ Config file: `~/.config/secure-clipboard/config.json` (open via menu: "Open conf
         { "name": "mask-example", "pattern": "/INTERNAL_\\w+/i", "action": "mask" },
         { "name": "discard-example", "pattern": "/CONFIDENTIAL/i", "action": "discard" }
     ],
-    "skipScanAppIdentifiers": ["com.1password.1password"]
+    "skipScanAppIdentifiers": ["com.1password.1password"],
+    "scanDelaySeconds": 0
 }
 ```
 
