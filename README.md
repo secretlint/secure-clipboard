@@ -92,6 +92,16 @@ Custom patterns with two actions:
 
 Patterns use `/regex/flags` syntax. Supported flags: `i` (case-insensitive), `m` (multiline), `s` (dotAll).
 
+### maskDelaySeconds
+
+Seconds to wait before scanning clipboard content. Default: `0` (immediate). During the delay, the raw value remains in the clipboard for normal paste operations. If the clipboard changes during the delay, the previous scan is cancelled.
+
+```json
+{
+    "maskDelaySeconds": 5
+}
+```
+
 ### skipScanAppIdentifiers
 
 Bundle identifiers of apps to skip scanning for. Clipboard changes from these apps are not scanned. Useful for password managers like 1Password.
