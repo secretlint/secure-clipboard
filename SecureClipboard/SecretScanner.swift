@@ -77,7 +77,7 @@ actor SecretScanner {
         // Write config to a temporary file instead of passing via --secretlintrcJSON argument.
         // macOS Process.arguments converts strings to NFD (Unicode decomposed form),
         // which breaks regex patterns containing characters like ビ (NFC) → ヒ+゙ (NFD).
-        let tmpConfigPath = NSTemporaryDirectory() + "secretlintrc-\(ProcessInfo.processInfo.processIdentifier).json"
+        let tmpConfigPath = NSTemporaryDirectory() + "secretlintrc-\(UUID().uuidString).json"
         try configJSON.write(toFile: tmpConfigPath, atomically: true, encoding: .utf8)
         defer { try? FileManager.default.removeItem(atPath: tmpConfigPath) }
 
