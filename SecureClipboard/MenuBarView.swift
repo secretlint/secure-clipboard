@@ -49,6 +49,13 @@ struct MenuBarView: View {
             }
         }
 
+        if let scanError = state.lastScanError {
+            Divider()
+            Text("⚠ Scan error: \(scanError)")
+                .font(.caption)
+                .foregroundStyle(.red)
+        }
+
         Divider()
         if let version = state.secretlintVersion {
             Text("secretlint v\(version)")

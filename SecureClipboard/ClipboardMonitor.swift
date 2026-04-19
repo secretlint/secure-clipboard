@@ -90,6 +90,7 @@ final class ClipboardMonitor {
     private func scanText(_ text: String, sourceApp: String?) async {
         do {
             let result = try await scanner.scan(text: text)
+            await MainActor.run { state.lastScanError = nil }
             switch result.action {
             case .discard(let patternName):
                 logger.info("Discard pattern matched: \(patternName)")
@@ -118,12 +119,16 @@ final class ClipboardMonitor {
             }
         } catch {
             logger.error("Secret scan failed: \(error)")
+            await MainActor.run {
+                state.lastScanError = error.localizedDescription
+            }
         }
     }
 
     private func scanImage(_ image: NSImage, sourceApp: String?) async {
         do {
             let result = try await imageDetector.detect(image: image)
+            await MainActor.run { state.lastScanError = nil }
             guard result.hasSecrets else { return }
 
             switch result.scanAction {
@@ -153,6 +158,9 @@ final class ClipboardMonitor {
             }
         } catch {
             logger.error("Image secret detection failed: \(error)")
+            await MainActor.run {
+                state.lastScanError = error.localizedDescription
+            }
         }
     }
 
