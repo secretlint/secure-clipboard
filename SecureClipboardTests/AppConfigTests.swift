@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import SecureClipboard
 
@@ -122,6 +123,27 @@ import Testing
         ]
     )
     #expect(config.matchesDiscardPattern("this is CONFIDENTIAL info")?.name == "ng")
+}
+
+@Test func scanDelaySecondsDefaultIsNil() {
+    let config = AppConfig.default
+    #expect(config.scanDelaySeconds == nil)
+}
+
+@Test func scanDelaySecondsParsesFromJSON() throws {
+    let json = """
+    {"rules":[],"scanDelaySeconds":15}
+    """
+    let config = try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8))
+    #expect(config.scanDelaySeconds == 15)
+}
+
+@Test func scanDelaySecondsOptionalInJSON() throws {
+    let json = """
+    {"rules":[]}
+    """
+    let config = try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8))
+    #expect(config.scanDelaySeconds == nil)
 }
 
 @Test func matchesDiscardPatternIgnoresMask() {

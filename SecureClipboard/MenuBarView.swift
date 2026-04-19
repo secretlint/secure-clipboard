@@ -13,7 +13,8 @@ struct MenuBarView: View {
             }
         ],
         "patterns": [],
-        "skipScanAppIdentifiers": []
+        "skipScanAppIdentifiers": [],
+        "scanDelaySeconds": 0
     }
     """
 

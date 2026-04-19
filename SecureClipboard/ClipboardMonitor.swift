@@ -61,6 +61,16 @@ final class ClipboardMonitor {
                         continue
                     }
 
+                    // Delay scanning if configured (default: 0 = immediate)
+                    let delay = config.scanDelaySeconds ?? 0
+                    if delay > 0 {
+                        Thread.sleep(forTimeInterval: delay)
+                        // If clipboard changed during delay, skip this scan
+                        if pasteboard.changeCount != current {
+                            continue
+                        }
+                    }
+
                     if let text = pasteboard.string(forType: .string), !text.isEmpty {
                         let semaphore = DispatchSemaphore(value: 0)
                         Task {
