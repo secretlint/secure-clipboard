@@ -82,6 +82,27 @@ final class StatusState {
         }
     }
 
+    /// Copy original image to clipboard (skips monitor scan), auto-clears after 90 seconds
+    func copyOriginalImage() {
+        guard let image = lastOriginalImage else { return }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects([image])
+        // Mark as concealed so clipboard managers (Alfred, etc.) don't record it
+        pasteboard.setData(Data(), forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
+        let copyChangeCount = pasteboard.changeCount
+        onCopy?(copyChangeCount)
+
+        // Auto-clear clipboard after 90 seconds (same as 1Password default)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 90) { [weak self] in
+            // Only clear if clipboard hasn't been changed since our copy
+            if pasteboard.changeCount == copyChangeCount {
+                pasteboard.clearContents()
+                self?.onCopy?(pasteboard.changeCount)
+            }
+        }
+    }
+
     /// Callback for ClipboardMonitor to record own clipboard changes
     var onCopy: ((Int) -> Void)?
 }

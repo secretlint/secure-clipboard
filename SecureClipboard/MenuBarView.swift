@@ -35,6 +35,13 @@ struct MenuBarView: View {
             Divider()
         }
 
+        if state.lastOriginalImage != nil {
+            Button(String(localized: "menu.copy_original_image", bundle: .module)) {
+                state.copyOriginalImage()
+            }
+            Divider()
+        }
+
         if state.recentDetections.isEmpty {
             Text("menu.no_detections", bundle: .module)
                 .foregroundStyle(.secondary)

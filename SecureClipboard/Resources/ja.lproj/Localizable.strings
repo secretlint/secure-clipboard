@@ -2,6 +2,7 @@
 "menu.enabled" = "有効";
 "menu.auto_update" = "自動更新";
 "menu.copy_original" = "元のテキストをコピー";
+"menu.copy_original_image" = "元の画像をコピー";
 "menu.no_detections" = "検出履歴なし";
 "menu.recent" = "直近の検出:";
 "menu.open_config" = "config.json を開く";

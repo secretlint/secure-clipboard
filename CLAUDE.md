@@ -40,6 +40,11 @@
 - "Copy Original Text" auto-clears clipboard after 90 seconds (matching 1Password behavior)
 - CLI tools (`secure-pbcopy`/`secure-pbpaste`) resolve symlinks via `readlink` loop to find secretlint binary in the .app bundle
 
+## Testing
+
+- `NSPasteboard.general` はプロセス内で共有されるため、ペーストボードに書き込むテストは `@Suite(.serialized)` でラップして直列実行にする
+- ペーストボードを使わないテスト（状態管理、アイコン名など）は並列実行のままでよい
+
 ## Conventions
 
 - Use `Bundle.module` for accessing resources and localized strings

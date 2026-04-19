@@ -2,6 +2,7 @@
 "menu.enabled" = "Enabled";
 "menu.auto_update" = "Auto Update";
 "menu.copy_original" = "Copy Original Text";
+"menu.copy_original_image" = "Copy Original Image";
 "menu.no_detections" = "No detections";
 "menu.recent" = "Recent:";
 "menu.open_config" = "Open config.json";
