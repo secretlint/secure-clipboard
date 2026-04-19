@@ -8,6 +8,11 @@ Secrets copied to the clipboard can accidentally end up in unintended places —
 
 When you intentionally need the raw value, select "Copy Original Text" from the menu bar to retrieve the unmasked content. The raw value is automatically cleared from the clipboard after 90 seconds (same as 1Password). This two-step process ensures secrets are only exposed when you explicitly choose to, and never linger on the clipboard.
 
+## Requirements
+
+- macOS 14 (Sonoma) or later
+- Apple Silicon or Intel Mac
+
 ## Install
 
 ```bash
