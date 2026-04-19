@@ -6,7 +6,7 @@ struct AppConfig: Codable {
     var rules: [SecretlintRule]
     var patterns: [Pattern]?
     var skipScanAppIdentifiers: [String]?
-    var maskDelaySeconds: Double?
+    var scanDelaySeconds: Double?
 
     struct SecretlintRule: Codable {
         let id: String
@@ -32,7 +32,7 @@ struct AppConfig: Codable {
         ],
         patterns: nil,
         skipScanAppIdentifiers: nil,
-        maskDelaySeconds: nil
+        scanDelaySeconds: nil
     )
 
     /// Load config from disk, falling back to defaults

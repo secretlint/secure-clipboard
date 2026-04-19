@@ -125,25 +125,25 @@ import Testing
     #expect(config.matchesDiscardPattern("this is CONFIDENTIAL info")?.name == "ng")
 }
 
-@Test func maskDelaySecondsDefaultIsNil() {
+@Test func scanDelaySecondsDefaultIsNil() {
     let config = AppConfig.default
-    #expect(config.maskDelaySeconds == nil)
+    #expect(config.scanDelaySeconds == nil)
 }
 
-@Test func maskDelaySecondsParsesFromJSON() throws {
+@Test func scanDelaySecondsParsesFromJSON() throws {
     let json = """
-    {"rules":[],"maskDelaySeconds":15}
+    {"rules":[],"scanDelaySeconds":15}
     """
     let config = try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8))
-    #expect(config.maskDelaySeconds == 15)
+    #expect(config.scanDelaySeconds == 15)
 }
 
-@Test func maskDelaySecondsOptionalInJSON() throws {
+@Test func scanDelaySecondsOptionalInJSON() throws {
     let json = """
     {"rules":[]}
     """
     let config = try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8))
-    #expect(config.maskDelaySeconds == nil)
+    #expect(config.scanDelaySeconds == nil)
 }
 
 @Test func matchesDiscardPatternIgnoresMask() {
