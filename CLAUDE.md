@@ -25,7 +25,7 @@
 
 - `AppState` (singleton) holds `StatusState` and `ClipboardMonitor`, ensuring they outlive SwiftUI struct lifecycle
 - `ClipboardMonitor` uses `Thread.detachNewThread` for polling — `Timer` and `DispatchSource` don't fire reliably from SwiftUI App `init()`
-- `SecretScanner` calls secretlint binary via `Process` subprocess with `--format=mask-result` and `--secretlintrcJSON`
+- `SecretScanner` calls secretlint binary via `Process` subprocess with `--format=mask-result` and `--secretlintrc` (config written to temp file to avoid macOS NFD normalization of Process arguments)
 - `ImageSecretDetector` uses Vision OCR to extract text + bounding boxes, then `SecretScanner` checks for secrets
 - `ClipboardRewriter` redacts image secrets using CICrystallize + CIGaussianBlur with background color fill
 - `SecretlintUpdater` checks GitHub API for new releases on app launch
