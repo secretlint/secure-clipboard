@@ -105,11 +105,40 @@ actor SecretlintUpdater {
             let attributes: [FileAttributeKey: Any] = [.posixPermissions: 0o755]
             try FileManager.default.setAttributes(attributes, ofItemAtPath: tempPath)
 
+            // Remove quarantine attribute and fix code signature
+            // Downloaded binaries may have broken LC_CODE_SIGNATURE that causes SIGKILL
+            removeQuarantine(atPath: tempPath)
+            adHocSign(atPath: tempPath)
+
+            // Verify new binary works before replacing
+            let verified = verifyBinary(atPath: tempPath)
+            guard verified else {
+                try? FileManager.default.removeItem(atPath: tempPath)
+                throw UpdateError.verificationFailed
+            }
+
             // Atomic swap
             let backupPath = binaryPath + ".bak"
             try? FileManager.default.removeItem(atPath: backupPath)
             try FileManager.default.moveItem(atPath: binaryPath, toPath: backupPath)
-            try FileManager.default.moveItem(atPath: tempPath, toPath: binaryPath)
+            do {
+                try FileManager.default.moveItem(atPath: tempPath, toPath: binaryPath)
+            } catch {
+                // Restore backup if swap fails
+                try? FileManager.default.moveItem(atPath: backupPath, toPath: binaryPath)
+                throw error
+            }
+
+            // Verify replaced binary also works (quarantine/signing might differ at final path)
+            let finalVerified = verifyBinary(atPath: binaryPath)
+            if !finalVerified {
+                // Restore backup
+                logger.error("Updated binary failed verification at final path, restoring backup")
+                try? FileManager.default.removeItem(atPath: binaryPath)
+                try? FileManager.default.moveItem(atPath: backupPath, toPath: binaryPath)
+                throw UpdateError.verificationFailed
+            }
+
             try? FileManager.default.removeItem(atPath: backupPath)
 
             logger.info("Updated secretlint: \(current) → \(latest.version)")
@@ -128,6 +157,56 @@ actor SecretlintUpdater {
             }
         }
         return nil
+    }
+
+    /// Remove macOS quarantine attribute from downloaded binary
+    private func removeQuarantine(atPath path: String) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/xattr")
+        process.arguments = ["-cr", path]
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+        try? process.run()
+        process.waitUntilExit()
+    }
+
+    /// Ad-hoc sign binary to fix broken or missing code signatures
+    /// Downloaded binaries may contain invalid LC_CODE_SIGNATURE which causes macOS kernel to SIGKILL
+    private func adHocSign(atPath path: String) {
+        // First remove any existing broken signature
+        let remove = Process()
+        remove.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        remove.arguments = ["--remove-signature", path]
+        remove.standardOutput = Pipe()
+        remove.standardError = Pipe()
+        try? remove.run()
+        remove.waitUntilExit()
+
+        // Then ad-hoc sign
+        let sign = Process()
+        sign.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        sign.arguments = ["--sign", "-", "--force", path]
+        sign.standardOutput = Pipe()
+        sign.standardError = Pipe()
+        try? sign.run()
+        sign.waitUntilExit()
+    }
+
+    /// Verify that a binary at the given path can execute --version successfully
+    private func verifyBinary(atPath path: String) -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: path)
+        process.arguments = ["--version"]
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        } catch {
+            logger.error("Binary verification failed at \(path): \(error)")
+            return false
+        }
     }
 
     private func sha256(data: Data) -> String {
@@ -155,11 +234,27 @@ enum UpdateResult {
     case failed(error: String)
 }
 
-enum UpdateError: Error {
+enum UpdateError: LocalizedError {
     case invalidResponse
     case unsupportedArchitecture(String)
     case checksumNotFound
     case checksumMismatch(expected: String, actual: String)
+    case verificationFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse:
+            return "Invalid response from GitHub API"
+        case .unsupportedArchitecture(let arch):
+            return "Unsupported architecture: \(arch)"
+        case .checksumNotFound:
+            return "Checksum not found in release"
+        case .checksumMismatch(let expected, let actual):
+            return "Checksum mismatch: expected \(expected), got \(actual)"
+        case .verificationFailed:
+            return "Downloaded binary failed verification (--version check failed)"
+        }
+    }
 }
 
 extension ProcessInfo {

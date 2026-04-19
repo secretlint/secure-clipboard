@@ -17,6 +17,7 @@ final class StatusState {
     var autoUpdate: Bool = true
     var secretlintVersion: String?
     var updateStatus: String?
+    var lastScanError: String?
 
     private(set) var lastOriginalText: String?
     private(set) var lastOriginalImage: NSImage?
