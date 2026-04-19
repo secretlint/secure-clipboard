@@ -40,6 +40,8 @@ actor ImageSecretDetector {
                 continuation.resume(returning: observations)
             }
             request.recognitionLevel = .accurate
+            request.revision = VNRecognizeTextRequestRevision3
+            request.automaticallyDetectsLanguage = true
 
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
             do {
