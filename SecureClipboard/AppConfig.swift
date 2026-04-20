@@ -95,6 +95,17 @@ struct AppConfig: Codable {
         return ids.contains(bundleId)
     }
 
+    func shouldSkipScan(
+        frontmostBundleId: String?,
+        pasteboardTypes: [String],
+        nspasteboardSource: String?
+    ) -> Bool {
+        guard let ids = skipScanAppIdentifiers else { return false }
+        if let id = frontmostBundleId, ids.contains(id) { return true }
+        if let source = nspasteboardSource, ids.contains(source) { return true }
+        return pasteboardTypes.contains(where: { ids.contains($0) })
+    }
+
     private func parseRegex(_ pattern: String) -> (String, NSRegularExpression.Options) {
         guard pattern.hasPrefix("/") else { return (pattern, []) }
         let trimmed = String(pattern.dropFirst())

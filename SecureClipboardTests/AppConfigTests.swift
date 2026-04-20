@@ -155,3 +155,64 @@ import Testing
     )
     #expect(config.matchesDiscardPattern("this has SECRET in it") == nil)
 }
+
+@Test func shouldSkipScanMatchesFrontmost() {
+    let config = AppConfig(
+        rules: [],
+        patterns: nil,
+        skipScanAppIdentifiers: ["com.1password.1password"]
+    )
+    #expect(config.shouldSkipScan(
+        frontmostBundleId: "com.1password.1password",
+        pasteboardTypes: [],
+        nspasteboardSource: nil
+    ) == true)
+}
+
+@Test func shouldSkipScanMatchesPasteboardType() {
+    let config = AppConfig(
+        rules: [],
+        patterns: nil,
+        skipScanAppIdentifiers: ["com.runningwithcrayons.alfred.clipping"]
+    )
+    #expect(config.shouldSkipScan(
+        frontmostBundleId: "com.apple.Terminal",
+        pasteboardTypes: ["public.utf8-plain-text", "com.runningwithcrayons.alfred.clipping"],
+        nspasteboardSource: nil
+    ) == true)
+}
+
+@Test func shouldSkipScanMatchesNspasteboardSource() {
+    let config = AppConfig(
+        rules: [],
+        patterns: nil,
+        skipScanAppIdentifiers: ["com.example.SourceApp"]
+    )
+    #expect(config.shouldSkipScan(
+        frontmostBundleId: "com.apple.Safari",
+        pasteboardTypes: [],
+        nspasteboardSource: "com.example.SourceApp"
+    ) == true)
+}
+
+@Test func shouldSkipScanNoMatchReturnsFalse() {
+    let config = AppConfig(
+        rules: [],
+        patterns: nil,
+        skipScanAppIdentifiers: ["com.1password.1password"]
+    )
+    #expect(config.shouldSkipScan(
+        frontmostBundleId: "com.apple.Safari",
+        pasteboardTypes: ["public.utf8-plain-text"],
+        nspasteboardSource: nil
+    ) == false)
+}
+
+@Test func shouldSkipScanNilIdentifiersReturnsFalse() {
+    let config = AppConfig(rules: [], patterns: nil, skipScanAppIdentifiers: nil)
+    #expect(config.shouldSkipScan(
+        frontmostBundleId: "com.apple.Safari",
+        pasteboardTypes: ["public.utf8-plain-text"],
+        nspasteboardSource: "com.example.App"
+    ) == false)
+}
