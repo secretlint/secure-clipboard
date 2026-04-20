@@ -73,7 +73,10 @@ Config file: `~/.config/secure-clipboard/config.json` (open via menu: "Open conf
         { "name": "mask-example", "pattern": "/INTERNAL_\\w+/i", "action": "mask" },
         { "name": "discard-example", "pattern": "/CONFIDENTIAL/i", "action": "discard" }
     ],
-    "skipScanAppIdentifiers": ["com.1password.1password"],
+    "skipScanAppIdentifiers": [
+        "com.1password.1password",
+        "com.runningwithcrayons.alfred.clipping"
+    ],
     "scanDelaySeconds": 0
 }
 ```
@@ -105,7 +108,15 @@ Seconds to wait before scanning clipboard content. Default: `0` (immediate). Dur
 
 ### skipScanAppIdentifiers
 
-Bundle identifiers of apps to skip scanning for. Clipboard changes from these apps are not scanned. Useful for password managers like 1Password.
+Identifiers to skip scanning for. Each value is matched against:
+
+1. The frontmost app's bundle identifier at the moment of copy
+2. The `org.nspasteboard.source` string on the pasteboard, if present
+3. Any pasteboard type string on the clipboard
+
+Use the frontmost bundle ID for apps like 1Password where the app is active when copying (`com.1password.1password`).
+
+Clipboard managers such as Alfred write a distinctive pasteboard type when re-copying from their history. To ignore re-copies from Alfred's clipboard history, add `com.runningwithcrayons.alfred.clipping` (the pasteboard type).
 
 Config changes are picked up on the next clipboard copy — no restart required.
 

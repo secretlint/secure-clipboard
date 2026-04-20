@@ -54,9 +54,18 @@ final class ClipboardMonitor {
                     let sourceApp = NSWorkspace.shared.frontmostApplication?.localizedName
                     let sourceBundleId = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
 
-                    // Check if source app should be ignored
+                    let pasteboardTypes = (pasteboard.types ?? []).map { $0.rawValue }
+                    let nspasteboardSource = pasteboard.string(forType: NSPasteboard.PasteboardType("org.nspasteboard.source"))
+
+                    self.logger.debug("Clipboard changed. frontmost=\(sourceBundleId ?? "nil", privacy: .public), nspasteboard.source=\(nspasteboardSource ?? "nil", privacy: .public), types=[\(pasteboardTypes.joined(separator: ", "), privacy: .public)]")
+
+                    // Check if the copy source should be ignored
                     let config = AppConfig.load()
-                    if config.shouldSkipScan(bundleId: sourceBundleId) {
+                    if config.shouldSkipScan(
+                        frontmostBundleId: sourceBundleId,
+                        pasteboardTypes: pasteboardTypes,
+                        nspasteboardSource: nspasteboardSource
+                    ) {
                         Thread.sleep(forTimeInterval: 0.5)
                         continue
                     }
