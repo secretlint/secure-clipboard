@@ -96,6 +96,23 @@ Custom patterns with two actions:
 
 Patterns use `/regex/flags` syntax. Supported flags: `i` (case-insensitive), `m` (multiline), `s` (dotAll).
 
+Each pattern can also take an optional `allows` array of regexes. Matches that overlap any `allows` regex are excluded from detection (same semantics as secretlint's `allows`).
+
+```json
+{
+    "patterns": [
+        {
+            "name": "discard-aaa",
+            "pattern": "/aaa/",
+            "action": "discard",
+            "allows": ["/https?:\\/\\/[^\\s]*aaa/"]
+        }
+    ]
+}
+```
+
+In the example above, bare `aaa` discards the clipboard, but `aaa` inside a URL is allowed.
+
 ### scanDelaySeconds
 
 Seconds to wait before scanning clipboard content. Default: `0` (immediate). During the delay, the raw value remains in the clipboard for normal paste operations. If the clipboard changes during the delay, the previous scan is cancelled.
