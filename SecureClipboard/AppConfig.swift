@@ -22,6 +22,14 @@ struct AppConfig: Codable {
         let name: String
         let pattern: String
         let action: PatternAction
+        let allows: [String]?
+
+        init(name: String, pattern: String, action: PatternAction, allows: [String]? = nil) {
+            self.name = name
+            self.pattern = pattern
+            self.action = action
+            self.allows = allows
+        }
     }
 
     static let configPath = NSHomeDirectory() + "/.config/secure-clipboard/config.json"
@@ -61,7 +69,11 @@ struct AppConfig: Codable {
         let maskPatterns = (patterns ?? []).filter { $0.action == .mask }
         if !maskPatterns.isEmpty {
             let patternOptions: [[String: Any]] = maskPatterns.map { p in
-                ["name": p.name, "pattern": p.pattern]
+                var dict: [String: Any] = ["name": p.name, "pattern": p.pattern]
+                if let allows = p.allows, !allows.isEmpty {
+                    dict["allows"] = allows
+                }
+                return dict
             }
             allRules.append([
                 "id": "@secretlint/secretlint-rule-pattern",
@@ -80,12 +92,24 @@ struct AppConfig: Codable {
     /// Check if text matches any discard pattern (Swift-side regex)
     func matchesDiscardPattern(_ text: String) -> Pattern? {
         guard let patterns else { return nil }
+        let fullRange = NSRange(text.startIndex..., in: text)
         for pattern in patterns where pattern.action == .discard {
             let (regexString, options) = parseRegex(pattern.pattern)
-            if let regex = try? NSRegularExpression(pattern: regexString, options: options),
-               regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil {
-                return pattern
+            guard let regex = try? NSRegularExpression(pattern: regexString, options: options) else { continue }
+            let matches = regex.matches(in: text, range: fullRange)
+            guard !matches.isEmpty else { continue }
+
+            let allowRanges: [NSRange] = (pattern.allows ?? [])
+                .compactMap { allowPattern -> NSRegularExpression? in
+                    let (r, o) = parseRegex(allowPattern)
+                    return try? NSRegularExpression(pattern: r, options: o)
+                }
+                .flatMap { $0.matches(in: text, range: fullRange).map { $0.range } }
+
+            let hasNonAllowedMatch = matches.contains { m in
+                !allowRanges.contains { NSIntersectionRange(m.range, $0).length > 0 }
             }
+            if hasNonAllowedMatch { return pattern }
         }
         return nil
     }

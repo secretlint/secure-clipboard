@@ -216,3 +216,66 @@ import Testing
         nspasteboardSource: "com.example.App"
     ) == false)
 }
+
+@Test func secretlintrcJSONIncludesPatternAllows() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(
+                name: "aaa-token",
+                pattern: "/aaa/",
+                action: .mask,
+                allows: ["/https?:\\/\\/[^\\s]*aaa/"]
+            )
+        ]
+    )
+    let json = config.secretlintrcJSON()
+    #expect(json.contains("aaa-token"))
+    #expect(json.contains("\"allows\""))
+    #expect(json.contains("https"))
+}
+
+@Test func secretlintrcJSONOmitsAllowsWhenNil() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(name: "x", pattern: "/TOKEN/", action: .mask)
+        ]
+    )
+    let json = config.secretlintrcJSON()
+    #expect(json.contains("\"allows\"") == false)
+}
+
+@Test func matchesDiscardPatternRespectsAllows() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(
+                name: "ng",
+                pattern: "/aaa/",
+                action: .discard,
+                allows: ["/https?:\\/\\/[^\\s]*aaa/"]
+            )
+        ]
+    )
+    // 裸のaaaはdiscard対象
+    #expect(config.matchesDiscardPattern("plain aaa here")?.name == "ng")
+    // URL中のaaaはallowされる
+    #expect(config.matchesDiscardPattern("see https://example.com/aaa for details") == nil)
+}
+
+@Test func matchesDiscardPatternAllowsOnlyOverlapping() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(
+                name: "ng",
+                pattern: "/aaa/",
+                action: .discard,
+                allows: ["/https?:\\/\\/[^\\s]*aaa/"]
+            )
+        ]
+    )
+    // URL中のaaaは許可されても、別の場所の裸のaaaはdiscard対象
+    #expect(config.matchesDiscardPattern("url https://example.com/aaa and plain aaa")?.name == "ng")
+}
