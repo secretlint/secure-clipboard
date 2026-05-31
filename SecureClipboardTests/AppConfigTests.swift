@@ -279,3 +279,24 @@ import Testing
     // URL中のaaaは許可されても、別の場所の裸のaaaはdiscard対象
     #expect(config.matchesDiscardPattern("url https://example.com/aaa and plain aaa")?.name == "ng")
 }
+
+@Test func clearClipboardAfterSecondsDefaultIsNil() {
+    let config = AppConfig.default
+    #expect(config.clearClipboardAfterSeconds == nil)
+}
+
+@Test func clearClipboardAfterSecondsParsesFromJSON() throws {
+    let json = """
+    {"rules":[],"clearClipboardAfterSeconds":60}
+    """
+    let config = try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8))
+    #expect(config.clearClipboardAfterSeconds == 60)
+}
+
+@Test func clearClipboardAfterSecondsOptionalInJSON() throws {
+    let json = """
+    {"rules":[]}
+    """
+    let config = try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8))
+    #expect(config.clearClipboardAfterSeconds == nil)
+}
