@@ -66,6 +66,8 @@ final class ClipboardMonitor {
                         pasteboardTypes: pasteboardTypes,
                         nspasteboardSource: nspasteboardSource
                     ) {
+                        // Scan is skipped, but stale content should still auto-clear.
+                        self.scheduleClearIfEnabled(config)
                         Thread.sleep(forTimeInterval: 0.5)
                         continue
                     }
@@ -96,6 +98,10 @@ final class ClipboardMonitor {
                         }
                         semaphore.wait()
                     }
+
+                    // Schedule auto-clear keyed to the post-scan changeCount
+                    // (covers external copies and SecureClipboard's own masked writes).
+                    self.scheduleClearIfEnabled(config)
                 }
                 Thread.sleep(forTimeInterval: 0.5)
             }
@@ -104,6 +110,30 @@ final class ClipboardMonitor {
 
     func stop() {
         isRunning = false
+    }
+
+    /// Clear the clipboard only if it hasn't changed since `capturedChangeCount`
+    /// and is not already empty. Records the clear as an own-change so the
+    /// monitor does not re-detect it (prevents an infinite clear loop).
+    func performClipboardClearIfUnchanged(capturedChangeCount: Int) {
+        let pasteboard = NSPasteboard.general
+        guard pasteboard.changeCount == capturedChangeCount else { return }
+        guard let types = pasteboard.types, !types.isEmpty else { return }
+
+        pasteboard.clearContents()
+        let newChangeCount = pasteboard.changeCount
+        recordOwnChange(changeCount: newChangeCount)
+        lastChangeCount = newChangeCount
+        logger.info("Clipboard auto-cleared")
+    }
+
+    /// Schedule an auto-clear after `seconds`, keyed to the current changeCount.
+    private func scheduleClearIfEnabled(_ config: AppConfig) {
+        guard let seconds = config.clearClipboardAfterSeconds, seconds > 0 else { return }
+        let captured = NSPasteboard.general.changeCount
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in
+            self?.performClipboardClearIfUnchanged(capturedChangeCount: captured)
+        }
     }
 
     private func scanText(_ text: String, sourceApp: String?) async {
