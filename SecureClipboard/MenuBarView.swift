@@ -14,7 +14,8 @@ struct MenuBarView: View {
         ],
         "patterns": [],
         "skipScanAppIdentifiers": [],
-        "scanDelaySeconds": 0
+        "scanDelaySeconds": 0,
+        "clearClipboardAfterSeconds": null
     }
     """
 

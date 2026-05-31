@@ -77,7 +77,8 @@ Config file: `~/.config/secure-clipboard/config.json` (open via menu: "Open conf
         "com.1password.1password",
         "com.runningwithcrayons.alfred.clipping"
     ],
-    "scanDelaySeconds": 0
+    "scanDelaySeconds": 0,
+    "clearClipboardAfterSeconds": null
 }
 ```
 
@@ -120,6 +121,16 @@ Seconds to wait before scanning clipboard content. Default: `0` (immediate). Dur
 ```json
 {
     "scanDelaySeconds": 5
+}
+```
+
+### clearClipboardAfterSeconds
+
+Seconds after the last clipboard change before the clipboard is automatically cleared. Default: `null` (disabled). This helps avoid accidentally pasting stale content copied earlier. The timer effectively resets on every clipboard change: if you copy something new within the interval, only the latest content is cleared. Set to `null` or `0` to disable.
+
+```json
+{
+    "clearClipboardAfterSeconds": 60
 }
 ```
 
