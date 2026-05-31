@@ -112,7 +112,7 @@ final class ClipboardMonitor {
     func performClipboardClearIfUnchanged(capturedChangeCount: Int) {
         let pasteboard = NSPasteboard.general
         guard pasteboard.changeCount == capturedChangeCount else { return }
-        guard pasteboard.types?.isEmpty == false else { return }
+        guard let types = pasteboard.types, !types.isEmpty else { return }
 
         pasteboard.clearContents()
         let newChangeCount = pasteboard.changeCount
