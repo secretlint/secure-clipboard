@@ -66,6 +66,8 @@ final class ClipboardMonitor {
                         pasteboardTypes: pasteboardTypes,
                         nspasteboardSource: nspasteboardSource
                     ) {
+                        // Scan is skipped, but stale content should still auto-clear.
+                        self.scheduleClearIfEnabled(config)
                         Thread.sleep(forTimeInterval: 0.5)
                         continue
                     }
@@ -96,6 +98,10 @@ final class ClipboardMonitor {
                         }
                         semaphore.wait()
                     }
+
+                    // Schedule auto-clear keyed to the post-scan changeCount
+                    // (covers external copies and SecureClipboard's own masked writes).
+                    self.scheduleClearIfEnabled(config)
                 }
                 Thread.sleep(forTimeInterval: 0.5)
             }
