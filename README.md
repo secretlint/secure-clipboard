@@ -134,6 +134,8 @@ Seconds after the last clipboard change before the clipboard is automatically cl
 }
 ```
 
+This applies to all clipboard changes, including copies from apps listed in `skipScanAppIdentifiers` (those copies are not scanned, but are still cleared). It does not affect "Copy Original Text" / "Copy Original Image", which keep their own fixed 90-second auto-clear window.
+
 ### skipScanAppIdentifiers
 
 Identifiers to skip scanning for. Each value is matched against:
