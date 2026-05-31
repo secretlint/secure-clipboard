@@ -106,6 +106,30 @@ final class ClipboardMonitor {
         isRunning = false
     }
 
+    /// Clear the clipboard only if it hasn't changed since `capturedChangeCount`
+    /// and is not already empty. Records the clear as an own-change so the
+    /// monitor does not re-detect it (prevents an infinite clear loop).
+    func performClipboardClearIfUnchanged(capturedChangeCount: Int) {
+        let pasteboard = NSPasteboard.general
+        guard pasteboard.changeCount == capturedChangeCount else { return }
+        guard pasteboard.types?.isEmpty == false else { return }
+
+        pasteboard.clearContents()
+        let newChangeCount = pasteboard.changeCount
+        recordOwnChange(changeCount: newChangeCount)
+        lastChangeCount = newChangeCount
+        logger.info("Clipboard auto-cleared")
+    }
+
+    /// Schedule an auto-clear after `seconds`, keyed to the current changeCount.
+    private func scheduleClearIfEnabled(_ config: AppConfig) {
+        guard let seconds = config.clearClipboardAfterSeconds, seconds > 0 else { return }
+        let captured = NSPasteboard.general.changeCount
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in
+            self?.performClipboardClearIfUnchanged(capturedChangeCount: captured)
+        }
+    }
+
     private func scanText(_ text: String, sourceApp: String?) async {
         do {
             let result = try await scanner.scan(text: text)
