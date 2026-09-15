@@ -17,6 +17,7 @@ struct AppConfig: Codable {
     enum PatternAction: String, Codable {
         case mask
         case discard
+        case replace
     }
 
     struct Pattern: Codable {
@@ -24,12 +25,20 @@ struct AppConfig: Codable {
         let pattern: String
         let action: PatternAction
         let allows: [String]?
+        let replacement: String?
 
-        init(name: String, pattern: String, action: PatternAction, allows: [String]? = nil) {
+        init(name: String, pattern: String, action: PatternAction, allows: [String]? = nil, replacement: String? = nil) {
             self.name = name
             self.pattern = pattern
             self.action = action
             self.allows = allows
+            self.replacement = replacement
+        }
+
+        /// `replace` without a usable replacement fails closed by behaving as `mask`.
+        var effectiveAction: PatternAction {
+            if action == .replace, (replacement ?? "").isEmpty { return .mask }
+            return action
         }
     }
 
@@ -67,8 +76,9 @@ struct AppConfig: Codable {
                 return dict
             }
 
-        // Add mask patterns only to secretlint (discard is handled by Swift)
-        let maskPatterns = (patterns ?? []).filter { $0.action == .mask }
+        // Add mask patterns only to secretlint (discard/replace are handled by Swift).
+        // `replace` without a non-empty replacement falls back to mask (fail closed).
+        let maskPatterns = (patterns ?? []).filter { $0.effectiveAction == .mask }
         if !maskPatterns.isEmpty {
             let patternOptions: [[String: Any]] = maskPatterns.map { p in
                 var dict: [String: Any] = ["name": p.name, "pattern": p.pattern]
@@ -94,26 +104,56 @@ struct AppConfig: Codable {
     /// Check if text matches any discard pattern (Swift-side regex)
     func matchesDiscardPattern(_ text: String) -> Pattern? {
         guard let patterns else { return nil }
-        let fullRange = NSRange(text.startIndex..., in: text)
         for pattern in patterns where pattern.action == .discard {
-            let (regexString, options) = parseRegex(pattern.pattern)
-            guard let regex = try? NSRegularExpression(pattern: regexString, options: options) else { continue }
-            let matches = regex.matches(in: text, range: fullRange)
-            guard !matches.isEmpty else { continue }
-
-            let allowRanges: [NSRange] = (pattern.allows ?? [])
-                .compactMap { allowPattern -> NSRegularExpression? in
-                    let (r, o) = parseRegex(allowPattern)
-                    return try? NSRegularExpression(pattern: r, options: o)
-                }
-                .flatMap { $0.matches(in: text, range: fullRange).map { $0.range } }
-
-            let hasNonAllowedMatch = matches.contains { m in
-                !allowRanges.contains { NSIntersectionRange(m.range, $0).length > 0 }
-            }
-            if hasNonAllowedMatch { return pattern }
+            if !nonAllowedMatchRanges(pattern, in: text).isEmpty { return pattern }
         }
         return nil
+    }
+
+    /// Replace every non-allowed match of each `replace` pattern with its literal
+    /// replacement string. Replacement is literal — no regex template expansion.
+    func applyingReplacePatterns(to text: String) -> String {
+        let replacePatterns = (patterns ?? []).filter { $0.effectiveAction == .replace }
+        guard !replacePatterns.isEmpty else { return text }
+
+        // Collect all ranges against the original text, in config order.
+        var chosen: [(range: NSRange, replacement: String)] = []
+        for pattern in replacePatterns {
+            guard let replacement = pattern.replacement, !replacement.isEmpty else { continue }
+            for range in nonAllowedMatchRanges(pattern, in: text) where range.length > 0 {
+                if !chosen.contains(where: { NSIntersectionRange($0.range, range).length > 0 }) {
+                    chosen.append((range, replacement))
+                }
+            }
+        }
+        guard !chosen.isEmpty else { return text }
+
+        // Mutate in UTF-16/NSRange space, highest offset first so earlier offsets stay valid.
+        let mutable = NSMutableString(string: text)
+        for item in chosen.sorted(by: { $0.range.location > $1.range.location }) {
+            mutable.replaceCharacters(in: item.range, with: item.replacement)
+        }
+        return mutable as String
+    }
+
+    /// Match ranges of `pattern` in `text` that do not overlap any `allows` regex.
+    private func nonAllowedMatchRanges(_ pattern: Pattern, in text: String) -> [NSRange] {
+        let fullRange = NSRange(text.startIndex..., in: text)
+        let (regexString, options) = parseRegex(pattern.pattern)
+        guard let regex = try? NSRegularExpression(pattern: regexString, options: options) else { return [] }
+        let matches = regex.matches(in: text, range: fullRange)
+        guard !matches.isEmpty else { return [] }
+
+        let allowRanges: [NSRange] = (pattern.allows ?? [])
+            .compactMap { allowPattern -> NSRegularExpression? in
+                let (r, o) = parseRegex(allowPattern)
+                return try? NSRegularExpression(pattern: r, options: o)
+            }
+            .flatMap { $0.matches(in: text, range: fullRange).map { $0.range } }
+
+        return matches.map(\.range).filter { range in
+            !allowRanges.contains { NSIntersectionRange(range, $0).length > 0 }
+        }
     }
 
     func shouldSkipScan(bundleId: String?) -> Bool {

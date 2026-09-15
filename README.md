@@ -71,7 +71,8 @@ Config file: `~/.config/secure-clipboard/config.json` (open via menu: "Open conf
     ],
     "patterns": [
         { "name": "mask-example", "pattern": "/INTERNAL_\\w+/i", "action": "mask" },
-        { "name": "discard-example", "pattern": "/CONFIDENTIAL/i", "action": "discard" }
+        { "name": "discard-example", "pattern": "/CONFIDENTIAL/i", "action": "discard" },
+        { "name": "replace-example", "pattern": "/(?<=API_TOKEN=)[0-9a-f]{32}/", "action": "replace", "replacement": "[REDACTED]" }
     ],
     "skipScanAppIdentifiers": [
         "com.1password.1password",
@@ -88,12 +89,13 @@ secretlint rules for detecting known secrets. `@secretlint/secretlint-rule-prese
 
 ### patterns
 
-Custom patterns with two actions:
+Custom patterns with three actions:
 
 | | Text | Image |
 |---|---|---|
 | `"action": "mask"` | Matched portions replaced with `***` | Secret regions redacted with crystallize + blur effect |
 | `"action": "discard"` | Entire clipboard replaced with `[DISCARDED: <name>]` | Entire image replaced with red warning image |
+| `"action": "replace"` | Matched portions replaced with the configured `replacement` string | Secret regions redacted with crystallize + blur effect (same as `mask`) |
 
 Patterns use `/regex/flags` syntax. Supported flags: `i` (case-insensitive), `m` (multiline), `s` (dotAll).
 
@@ -113,6 +115,41 @@ Each pattern can also take an optional `allows` array of regexes. Matches that o
 ```
 
 In the example above, bare `aaa` discards the clipboard, but `aaa` inside a URL is allowed.
+
+### replace
+
+`"action": "replace"` replaces only the regex match with a fixed literal string, leaving the variable/key name and surrounding text untouched. Multiple matches in one clipboard value are all replaced.
+
+```json
+{
+    "patterns": [
+        {
+            "name": "api-token",
+            "pattern": "/(?<=API_TOKEN=)[0-9a-f]{32}/",
+            "action": "replace",
+            "replacement": "[REDACTED]"
+        }
+    ]
+}
+```
+
+Input:
+
+```
+API_TOKEN=0123456789abcdef0123456789abcdef
+NOTIFY_TOKEN=abcdef1234567890abcdef1234567890
+CLIENT_ID=not-a-secret
+```
+
+Output:
+
+```
+API_TOKEN=[REDACTED]
+NOTIFY_TOKEN=abcdef1234567890abcdef1234567890
+CLIENT_ID=not-a-secret
+```
+
+The `replacement` string is inserted literally: characters such as `$1`, `\1`, `$$`, and `\` are not interpreted as regex replacement syntax. A `replace` pattern without a non-empty `replacement` fails closed and behaves as `mask`. `allows` is honored the same way as for `mask`/`discard`. For images, `replace` redacts the matched region the same way `mask` does. When patterns overlap, `discard` takes precedence over `replace`, and `replace` over `mask`.
 
 ### scanDelaySeconds
 

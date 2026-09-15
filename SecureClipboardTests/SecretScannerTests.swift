@@ -48,3 +48,116 @@ private func slackTokenText() -> String {
     #expect(result.hasSecrets == true)
     #expect(result.maskedText.contains("*"))
 }
+
+private func makeScannerWithConfig(_ config: AppConfig) -> SecretScanner {
+    let testFilePath = URL(fileURLWithPath: #filePath)
+    let repoRoot = testFilePath
+        .deletingLastPathComponent() // SecureClipboardTests/
+        .deletingLastPathComponent() // repo root
+    let binaryPath = repoRoot
+        .appendingPathComponent("SecureClipboard")
+        .appendingPathComponent("Resources")
+        .appendingPathComponent("secretlint")
+        .path
+    return SecretScanner(binaryPath: binaryPath, configProvider: { config })
+}
+
+@Test func scanTextWithReplacePattern() async throws {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(
+                name: "token-value",
+                pattern: "/[0-9a-f]{32}/",
+                action: .replace,
+                replacement: "[REDACTED]"
+            )
+        ]
+    )
+    let scanner = makeScannerWithConfig(config)
+    let secret = "0123456789abcdef0123456789abcdef"
+    let input = "PROXMOX_TOKEN_SECRET=\(secret)"
+    let result = try await scanner.scan(text: input)
+    #expect(result.hasSecrets == true)
+    #expect(result.maskedText == "PROXMOX_TOKEN_SECRET=[REDACTED]")
+    #expect(result.originalText == input)
+    #expect(result.maskedText.contains(secret) == false)
+}
+
+@Test func scanTextWithReplaceAndPresetSecret() async throws {
+    let config = AppConfig(
+        rules: [
+            .init(id: "@secretlint/secretlint-rule-preset-recommend", options: nil)
+        ],
+        patterns: [
+            .init(
+                name: "token-value",
+                pattern: "/[0-9a-f]{32}/",
+                action: .replace,
+                replacement: "[REDACTED]"
+            )
+        ]
+    )
+    let scanner = makeScannerWithConfig(config)
+    let secret = "0123456789abcdef0123456789abcdef"
+    let slack = slackTokenText()
+    let input = "HEX=\(secret) SLACK=\(slack)"
+    let result = try await scanner.scan(text: input)
+    #expect(result.hasSecrets == true)
+    #expect(result.maskedText.contains(secret) == false)
+    #expect(result.maskedText.contains("[REDACTED]"))
+    #expect(result.maskedText.contains(slack) == false)
+    #expect(result.maskedText.contains("*"))
+}
+
+@Test func scanTextWithReplacePresetSecretAndTrailingNewline() async throws {
+    let config = AppConfig(
+        rules: [
+            .init(id: "@secretlint/secretlint-rule-preset-recommend", options: nil)
+        ],
+        patterns: [
+            .init(
+                name: "api-token",
+                pattern: "/(?<=API_TOKEN=)[0-9a-f]{32}/",
+                action: .replace,
+                replacement: "[REDACTED]"
+            )
+        ]
+    )
+    let scanner = makeScannerWithConfig(config)
+    let hex = "0123456789abcdef0123456789abcdef"
+    let slackPrefix = "xoxb"
+    let slack = "\(slackPrefix)-123456789012-1234567890123-ABCDEFGHIJKLMNOPabcdefgh"
+    let input = "API_TOKEN=\(hex) SLACK=\(slack)\n"
+
+    let result = try await scanner.scan(text: input)
+
+    #expect(result.hasSecrets == true)
+    #expect(result.originalText == input)
+    // Custom replace preserved.
+    #expect(result.maskedText.hasPrefix("API_TOKEN=[REDACTED] SLACK="))
+    #expect(result.maskedText.contains(hex) == false)
+    // secretlint mask preserved.
+    #expect(result.maskedText.contains(slack) == false)
+    #expect(result.maskedText.contains("*"))
+    // Trailing newline preserved.
+    #expect(result.maskedText.hasSuffix("\n"))
+}
+
+@Test func scanTextWithReplaceNoMatch() async throws {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(
+                name: "token-value",
+                pattern: "/[0-9a-f]{32}/",
+                action: .replace,
+                replacement: "[REDACTED]"
+            )
+        ]
+    )
+    let scanner = makeScannerWithConfig(config)
+    let result = try await scanner.scan(text: "no secrets here")
+    #expect(result.hasSecrets == false)
+    #expect(result.maskedText == "no secrets here")
+}
