@@ -18,11 +18,29 @@ mkdir -p "${MACOS}" "${RESOURCES}"
 # Copy binary
 cp ".build/release/${APP_NAME}" "${MACOS}/${APP_NAME}"
 
-# Copy SPM resource bundle to where Bundle.module expects it
-# SPM looks relative to the .app directory (2 levels up from binary)
+# Xcode 27 (Swift Build) emits a macOS-style resource bundle:
+#   <bundle>/Contents/Info.plist
+#   <bundle>/Contents/Resources/Resources/<resources>
+# Bundle.module and String(localized:bundle:) need the flat layout SwiftPM's
+# index build produces, with resources directly under <bundle>/Resources.
+# Only transform bundles that actually have the Xcode 27 structure; leave
+# already-flat bundles (e.g. older SwiftPM) untouched.
+flatten_resource_bundle() {
+    local bundle="$1"
+    [ -d "${bundle}/Contents/Resources/Resources" ] || return 0
+    [ -f "${bundle}/Contents/Info.plist" ] || return 0
+    mv "${bundle}/Contents/Resources/Resources" "${bundle}/Resources"
+    mv "${bundle}/Contents/Info.plist" "${bundle}/Info.plist"
+    rm -rf "${bundle}/Contents"
+}
+
+# Copy SPM resource bundle where Bundle.module expects it.
+# Xcode 27 (Swift Build) checks Bundle.main.resourceURL first: Contents/Resources/.
+cp -R ".build/release/${APP_NAME}_${APP_NAME}.bundle" "${RESOURCES}/"
+flatten_resource_bundle "${RESOURCES}/${APP_NAME}_${APP_NAME}.bundle"
+# Older SwiftPM accessors (Xcode <= 16.x, used by the release CI) check the .app root only.
 cp -R ".build/release/${APP_NAME}_${APP_NAME}.bundle" "${APP_DIR}/"
-# Also copy next to binary as fallback
-cp -R ".build/release/${APP_NAME}_${APP_NAME}.bundle" "${MACOS}/"
+flatten_resource_bundle "${APP_DIR}/${APP_NAME}_${APP_NAME}.bundle"
 
 # Copy CLI binary and create symlinks for secure-pbpaste/secure-pbcopy
 cp ".build/release/SecureClipboardCLI" "${MACOS}/SecureClipboardCLI"
