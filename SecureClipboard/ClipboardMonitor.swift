@@ -7,6 +7,7 @@ final class ClipboardMonitor {
     private let imageDetector: ImageSecretDetector
     private let rewriter: ClipboardRewriter
     private let state: StatusState
+    private let notifications: NotificationManager
 
     private var lastChangeCount: Int
     private var ownChangeCount: Int?
@@ -16,13 +17,15 @@ final class ClipboardMonitor {
         scanner: SecretScanner? = nil,
         imageDetector: ImageSecretDetector? = nil,
         rewriter: ClipboardRewriter? = nil,
-        state: StatusState? = nil
+        state: StatusState? = nil,
+        notifications: NotificationManager? = nil
     ) {
         let scannerInstance = scanner ?? SecretScanner()
         self.scanner = scannerInstance
         self.imageDetector = imageDetector ?? ImageSecretDetector(scanner: scannerInstance)
         self.rewriter = rewriter ?? ClipboardRewriter()
         self.state = state ?? StatusState()
+        self.notifications = notifications ?? .shared
         self.lastChangeCount = NSPasteboard.general.changeCount
     }
 
@@ -214,10 +217,6 @@ final class ClipboardMonitor {
     }
 
     private func sendNotification(title: String, body: String) {
-        let notification = NSUserNotification()
-        notification.title = title
-        notification.informativeText = body
-        notification.soundName = NSUserNotificationDefaultSoundName
-        NSUserNotificationCenter.default.deliver(notification)
+        notifications.send(title: title, body: body)
     }
 }
