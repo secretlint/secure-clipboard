@@ -18,6 +18,9 @@ mkdir -p "${MACOS}" "${RESOURCES}"
 # Copy binary
 cp ".build/release/${APP_NAME}" "${MACOS}/${APP_NAME}"
 
+# Copy the application icon into the outer .app bundle's Resources
+cp "assets/${APP_NAME}.icns" "${RESOURCES}/${APP_NAME}.icns"
+
 # Copy SPM resource bundle to where Bundle.module expects it
 # SPM looks relative to the .app directory (2 levels up from binary)
 cp -R ".build/release/${APP_NAME}_${APP_NAME}.bundle" "${APP_DIR}/"
@@ -41,6 +44,8 @@ cat > "${CONTENTS}/Info.plist" << PLIST
     <string>${BUNDLE_ID}</string>
     <key>CFBundleName</key>
     <string>${APP_NAME}</string>
+    <key>CFBundleIconFile</key>
+    <string>${APP_NAME}.icns</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleVersion</key>
