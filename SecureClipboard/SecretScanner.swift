@@ -28,6 +28,7 @@ struct ScanResult {
 actor SecretScanner {
     private let binaryPath: String
     private let fixedConfigJSON: String?
+    private let configProvider: () -> AppConfig
 
     init() {
         if let url = Bundle.module.url(forResource: "secretlint", withExtension: nil, subdirectory: "Resources") {
@@ -38,37 +39,47 @@ actor SecretScanner {
             self.binaryPath = "secretlint"
         }
         self.fixedConfigJSON = nil
+        self.configProvider = { AppConfig.load() }
     }
 
-    init(binaryPath: String, configJSON: String? = nil) {
+    init(binaryPath: String, configJSON: String? = nil, configProvider: @escaping () -> AppConfig = { AppConfig.load() }) {
         self.binaryPath = binaryPath
         self.fixedConfigJSON = configJSON
+        self.configProvider = configProvider
     }
 
     func scan(text: String) async throws -> ScanResult {
-        let currentConfig = AppConfig.load()
+        let currentConfig = configProvider()
 
         // Check discard patterns first (Swift-side regex, no secretlint call needed)
         if fixedConfigJSON == nil, let matched = currentConfig.matchesDiscardPattern(text) {
             return ScanResult(action: .discard(patternName: matched.name), originalText: text)
         }
 
+        // Apply replace patterns Swift-side before secretlint so the preset/mask
+        // rules only see the already-rewritten text.
+        let baseText = fixedConfigJSON == nil ? currentConfig.applyingReplacePatterns(to: text) : text
+
         // Run secretlint with --format=mask-result
         let currentConfigJSON = fixedConfigJSON ?? currentConfig.secretlintrcJSON()
-        let rawOutput = try await runSecretlint(input: text, format: "mask-result", configJSON: currentConfigJSON)
+        let rawOutput = try await runSecretlint(input: baseText, format: "mask-result", configJSON: currentConfigJSON)
         // Normalize trailing whitespace for comparison — secretlint may strip trailing newlines
         let normalizedOutput = rawOutput.trimmingCharacters(in: .whitespacesAndNewlines)
-        let normalizedInput = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedInput = baseText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if normalizedOutput != normalizedInput {
             // Real masking happened — reconstruct with original trailing whitespace
             let maskedText: String
-            if !text.hasSuffix("\n") && rawOutput.hasSuffix("\n") {
+            if !baseText.hasSuffix("\n") && rawOutput.hasSuffix("\n") {
                 maskedText = String(rawOutput.dropLast())
             } else {
                 maskedText = rawOutput
             }
             return ScanResult(action: .mask(maskedText: maskedText), originalText: text)
+        }
+        if baseText != text {
+            // Replace patterns changed the text; secretlint found nothing further.
+            return ScanResult(action: .mask(maskedText: baseText), originalText: text)
         }
         return ScanResult(action: .none, originalText: text)
     }

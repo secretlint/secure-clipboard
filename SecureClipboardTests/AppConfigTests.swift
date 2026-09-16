@@ -300,3 +300,180 @@ import Testing
     let config = try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8))
     #expect(config.clearClipboardAfterSeconds == nil)
 }
+
+// MARK: - replace action
+
+@Test func replacePatternReplacesMatchOnly() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(
+                name: "token-value",
+                pattern: "/(?<=PROXMOX_TOKEN_SECRET=)[0-9a-f]{32}/",
+                action: .replace,
+                replacement: "[REDACTED]"
+            )
+        ]
+    )
+    let input = "PROXMOX_TOKEN_SECRET=0123456789abcdef0123456789abcdef"
+    #expect(config.applyingReplacePatterns(to: input) == "PROXMOX_TOKEN_SECRET=[REDACTED]")
+}
+
+@Test func replacePatternHandlesUnicodeAroundMultipleMatches() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(name: "hex-token", pattern: "/[0-9a-f]{16,}/", action: .replace, replacement: "[REDACTED]")
+        ]
+    )
+    let input = "PREFIX_😀 API_TOKEN=0123456789abcdef MIDDLE_äöü NOTIFY_TOKEN=abcdef1234567890 SUFFIX"
+    let expected = "PREFIX_😀 API_TOKEN=[REDACTED] MIDDLE_äöü NOTIFY_TOKEN=[REDACTED] SUFFIX"
+    #expect(config.applyingReplacePatterns(to: input) == expected)
+}
+
+@Test func replacePatternHandlesRepeatedSamePattern() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(name: "hex-token", pattern: "/[0-9a-f]{16,}/", action: .replace, replacement: "[REDACTED]")
+        ]
+    )
+    let input = "API_TOKEN=0123456789abcdef\nAPI_TOKEN=abcdef1234567890"
+    let expected = "API_TOKEN=[REDACTED]\nAPI_TOKEN=[REDACTED]"
+    #expect(config.applyingReplacePatterns(to: input) == expected)
+}
+
+@Test func replacePatternReplacementIsLiteral() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(name: "token", pattern: "/SECRET/", action: .replace, replacement: "$1\\foo[REDACTED]")
+        ]
+    )
+    #expect(config.applyingReplacePatterns(to: "value=SECRET") == "value=$1\\foo[REDACTED]")
+}
+
+@Test func replacePatternReplacementLiteralDollarAndBackslash() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(name: "token", pattern: "/SECRET/", action: .replace, replacement: "$$\\1")
+        ]
+    )
+    #expect(config.applyingReplacePatterns(to: "aSECRETb") == "a$$\\1b")
+}
+
+@Test func replacePatternUnicodeReplacement() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(name: "token", pattern: "/SECRET/", action: .replace, replacement: "🔒秘")
+        ]
+    )
+    #expect(config.applyingReplacePatterns(to: "a SECRET b") == "a 🔒秘 b")
+}
+
+@Test func replacePatternRespectsAllows() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(
+                name: "aaa-token",
+                pattern: "/aaa/",
+                action: .replace,
+                allows: ["/https?:\\/\\/[^\\s]*aaa/"],
+                replacement: "[REDACTED]"
+            )
+        ]
+    )
+    #expect(
+        config.applyingReplacePatterns(to: "url https://example.com/aaa and plain aaa")
+            == "url https://example.com/aaa and plain [REDACTED]"
+    )
+}
+
+@Test func replacePatternOverlapFirstConfigWins() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(name: "first", pattern: "/abc/", action: .replace, replacement: "[FIRST]"),
+            .init(name: "second", pattern: "/bcd/", action: .replace, replacement: "[SECOND]")
+        ]
+    )
+    #expect(config.applyingReplacePatterns(to: "abcd") == "[FIRST]d")
+}
+
+@Test func replacePatternInvalidRegexIsSkipped() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(name: "bad", pattern: "/([unclosed/", action: .replace, replacement: "[REDACTED]")
+        ]
+    )
+    #expect(config.applyingReplacePatterns(to: "unchanged text") == "unchanged text")
+}
+
+@Test func replacePatternZeroLengthMatchIsIgnored() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(name: "empty", pattern: "/x*/", action: .replace, replacement: "[R]")
+        ]
+    )
+    #expect(config.applyingReplacePatterns(to: "abc") == "abc")
+}
+
+@Test func secretlintrcJSONExcludesReplacePatterns() {
+    let config = AppConfig(
+        rules: [
+            .init(id: "@secretlint/secretlint-rule-preset-recommend", options: nil)
+        ],
+        patterns: [
+            .init(name: "token", pattern: "/TOKEN/", action: .replace, replacement: "[REDACTED]")
+        ]
+    )
+    let json = config.secretlintrcJSON()
+    #expect(json.contains("secretlint-rule-pattern") == false)
+    #expect(json.contains("TOKEN") == false)
+}
+
+@Test func replacePatternMissingReplacementFallsBackToMask() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(name: "token", pattern: "/TOKEN/", action: .replace, replacement: nil)
+        ]
+    )
+    let json = config.secretlintrcJSON()
+    #expect(json.contains("secretlint-rule-pattern"))
+    #expect(json.contains("TOKEN"))
+    #expect(config.applyingReplacePatterns(to: "a TOKEN b") == "a TOKEN b")
+}
+
+@Test func replacePatternEmptyReplacementFallsBackToMask() {
+    let config = AppConfig(
+        rules: [],
+        patterns: [
+            .init(name: "token", pattern: "/TOKEN/", action: .replace, replacement: "")
+        ]
+    )
+    #expect(config.secretlintrcJSON().contains("TOKEN"))
+    #expect(config.applyingReplacePatterns(to: "a TOKEN b") == "a TOKEN b")
+}
+
+@Test func patternDecodingWithoutReplacementIsNil() throws {
+    let json = """
+    {"rules":[],"patterns":[{"name":"m","pattern":"/X/","action":"mask"}]}
+    """
+    let config = try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8))
+    #expect(config.patterns?.first?.replacement == nil)
+}
+
+@Test func patternDecodingWithReplace() throws {
+    let json = """
+    {"rules":[],"patterns":[{"name":"r","pattern":"/X/","action":"replace","replacement":"[REDACTED]"}]}
+    """
+    let config = try JSONDecoder().decode(AppConfig.self, from: Data(json.utf8))
+    #expect(config.patterns?.first?.action == .replace)
+    #expect(config.patterns?.first?.replacement == "[REDACTED]")
+}
