@@ -16,6 +16,9 @@ final class AppState {
         monitor = m
         m.start()
 
+        // Request notification authorization once per launch
+        NotificationManager.shared.start()
+
         // Start IPC server for CLI tools
         let ipc = IPCServer(scanner: scanner, rewriter: rewriter, state: statusState)
         ipc.start()
