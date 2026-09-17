@@ -6,7 +6,6 @@ struct DetectionRecord: Identifiable {
     let summary: String
     let sourceApp: String?
     let originalText: String?
-    let originalImage: NSImage?
 }
 
 @Observable
@@ -38,8 +37,7 @@ final class StatusState {
             timestamp: Date(),
             summary: summary,
             sourceApp: sourceApp,
-            originalText: originalText,
-            originalImage: originalImage
+            originalText: originalText
         )
         recentDetections.insert(record, at: 0)
         if recentDetections.count > 5 {
