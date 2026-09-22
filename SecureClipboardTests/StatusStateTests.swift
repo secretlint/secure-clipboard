@@ -32,6 +32,14 @@ import AppKit
     #expect(state.recentDetections[0].summary == "detection 9")
 }
 
+/// Recording an image must still make it available to the existing Copy Original behavior.
+@Test func recordDetectionKeepsImageForCopyOriginal() {
+    let state = StatusState()
+    let image = NSImage(size: NSSize(width: 10, height: 10))
+    state.recordDetection(summary: "test", originalImage: image)
+    #expect(state.lastOriginalImage === image)
+}
+
 @Test func copyOriginalTextDoesNothingWhenNoOriginal() {
     let state = StatusState()
     var copyCalled = false
